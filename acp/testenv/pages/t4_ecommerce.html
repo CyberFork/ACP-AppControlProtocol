@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T4 电商购物 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    .shop-layout { display: flex; min-height: calc(100vh - 56px); }
+    .shop-main { flex: 1; padding: 20px; overflow: auto; }
+    .cart-sidebar {
+      width: 320px; background: white; border-left: 1px solid var(--border);
+      padding: 16px; display: flex; flex-direction: column;
+      position: sticky; top: 56px; height: calc(100vh - 56px); overflow-y: auto;
+    }
+    @media (max-width: 900px) { .cart-sidebar { display: none; } }
+
+    /* Product grid */
+    .products-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 700px) { .products-grid { grid-template-columns: repeat(2, 1fr); } }
+    .product-card {
+      background: white; border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; transition: transform 0.15s, box-shadow 0.15s; cursor: pointer;
+    }
+    .product-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .product-img { width: 100%; height: 140px; display: flex; align-items: center; justify-content: center; font-size: 48px; }
+    .product-info { padding: 12px; }
+    .product-name { font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+    .product-price { color: var(--danger); font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+    .product-original { text-decoration: line-through; color: var(--text-muted); font-size: 12px; }
+
+    /* Carousel (E25, A10, A12) */
+    .carousel { position: relative; overflow: hidden; border-radius: 12px; margin-bottom: 24px; height: 180px; }
+    .carousel-track { display: flex; transition: transform 0.4s ease; height: 100%; }
+    .carousel-slide { flex-shrink: 0; width: 100%; display: flex; align-items: center; justify-content: center; font-size: 64px; }
+    .carousel-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      background: rgba(255,255,255,0.9); border: none; width: 36px; height: 36px;
+      border-radius: 50%; cursor: pointer; font-size: 16px; z-index: 2;
+      box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center;
+    }
+    .carousel-btn-prev { left: 12px; }
+    .carousel-btn-next { right: 12px; }
+    .carousel-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.6); cursor: pointer; transition: background 0.2s; }
+    .dot.active { background: white; }
+
+    /* Cart */
+    .cart-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+    .cart-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .cart-item-emoji { font-size: 28px; }
+    .cart-item-body { flex: 1; min-width: 0; }
+    .cart-item-name { font-size: 13px; font-weight: 500; }
+    .cart-item-price { font-size: 12px; color: var(--danger); }
+    .qty-ctrl { display: flex; align-items: center; gap: 4px; }
+    .qty-btn { width: 24px; height: 24px; border: 1px solid var(--border); background: white; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+    .qty-btn:hover { background: var(--bg); }
+    .qty-num { width: 28px; text-align: center; font-size: 13px; font-weight: 600; }
+    .cart-total { margin-top: 12px; padding-top: 12px; border-top: 2px solid var(--border); font-size: 16px; font-weight: 700; }
+    .empty-cart { text-align: center; color: var(--text-muted); padding: 32px 0; font-size: 32px; }
+
+    /* Checkout stepper */
+    .stepper { display: flex; align-items: center; margin-bottom: 24px; }
+    .step { display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .step-circle {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--text-muted);
+    }
+    .step-circle.active { background: var(--primary); color: white; }
+    .step-circle.done { background: var(--success); color: white; }
+    .step-label { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .step-line { flex: 1; height: 2px; background: var(--border); }
+    .step-line.done { background: var(--success); }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed; inset: 0; background: rgba(255,255,255,0.85);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .loading-overlay.show { opacity: 1; pointer-events: all; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>T4 电商购物流程</h1>
+    <span class="coverage">E01, E18, E22, E25, E32 / A01, A09, A10, A12</span>
+  </div>
+
+  <div class="shop-layout">
+    <div class="shop-main">
+
+      <!-- Carousel (E25) -->
+      <div class="carousel" data-acp-type="carousel" data-acp-id="hero-carousel">
+        <div class="carousel-track" id="carousel-track">
+          <div class="carousel-slide" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe)">🎧 新品上市</div>
+          <div class="carousel-slide" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0)">📱 限时特惠</div>
+          <div class="carousel-slide" style="background:linear-gradient(135deg,#fef3c7,#fde68a)">💻 年度大促</div>
+        </div>
+        <button class="carousel-btn carousel-btn-prev" data-acp-type="button" data-acp-id="carousel-prev" onclick="prevSlide()">‹</button>
+        <button class="carousel-btn carousel-btn-next" data-acp-type="button" data-acp-id="carousel-next" onclick="nextSlide()">›</button>
+        <div class="carousel-dots" id="carousel-dots">
+          <div class="dot active" onclick="goSlide(0)" data-acp-type="button" data-acp-id="dot-0"></div>
+          <div class="dot" onclick="goSlide(1)" data-acp-type="button" data-acp-id="dot-1"></div>
+          <div class="dot" onclick="goSlide(2)" data-acp-type="button" data-acp-id="dot-2"></div>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="flex items-center justify-between mb-4">
+        <h2 style="font-size:16px;font-weight:600;">全部商品</h2>
+        <select class="form-select" style="width:140px;" onchange="sortProducts(this.value)"
+                data-acp-type="select" data-acp-id="sort-select">
+          <option value="default">默认排序</option>
+          <option value="price-asc">价格升序</option>
+          <option value="price-desc">价格降序</option>
+        </select>
+      </div>
+
+      <!-- Product Grid (E18, E22) -->
+      <div class="products-grid" id="products-grid" data-acp-type="product-grid" data-acp-id="products-grid">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Checkout Panel (E32 progress) -->
+      <div class="card mt-4" id="checkout-panel" style="display:none;">
+        <div class="card-header">结算流程</div>
+        <div class="stepper" data-acp-type="stepper" data-acp-id="checkout-stepper" id="checkout-stepper"></div>
+        <div id="checkout-step-content"></div>
+      </div>
+
+    </div>
+
+    <!-- Cart Sidebar -->
+    <div class="cart-sidebar" data-acp-type="sidebar" data-acp-id="cart-sidebar">
+      <div class="cart-title">🛒 购物车 <span id="cart-count" style="background:var(--danger);color:white;border-radius:999px;padding:1px 6px;font-size:11px;">0</span></div>
+      <div id="cart-items" style="flex:1;">
+        <div class="empty-cart" id="empty-cart-msg" data-acp-type="empty-state" data-acp-id="empty-cart">
+          <div>🛒</div>
+          <div style="font-size:14px;margin-top:8px;">购物车为空</div>
+        </div>
+      </div>
+      <div class="cart-total" style="display:none;" id="cart-total-row">
+        合计: <span style="color:var(--danger);" id="cart-total">¥0</span>
+      </div>
+      <button class="btn btn-primary w-full mt-4" id="checkout-btn" onclick="startCheckout()"
+              style="display:none;" data-acp-type="button" data-acp-id="checkout-btn">去结算</button>
+    </div>
+  </div>
+
+  <!-- Loading Overlay (E32, S11) -->
+  <div class="loading-overlay" id="loading-overlay" data-acp-type="loading" data-acp-id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="margin-top:16px;color:var(--text-muted);font-size:14px;" id="loading-text">加载中...</div>
+    <!-- Progress bar (E32) -->
+    <div class="progress" style="width:200px;margin-top:12px;" data-acp-type="progress" data-acp-id="checkout-progress">
+      <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="toast-container"></div>
+  <script src="../static/testenv.js"></script>
+  <script src="../auto_label.js"></script>
+  <script>
+    const products = [
+      { id:1, name:'AirPods Pro', emoji:'🎧', price:1899, orig:2399, color:'#ede9fe' },
+      { id:2, name:'iPhone 15', emoji:'📱', price:5999, orig:7499, color:'#dcfce7' },
+      { id:3, name:'MacBook Air', emoji:'💻', price:8999, orig:10999, color:'#fef3c7' },
+      { id:4, name:'iPad Mini', emoji:'📟', price:3499, orig:3999, color:'#dbeafe' },
+      { id:5, name:'Apple Watch', emoji:'⌚', price:2999, orig:3299, color:'#fce7f3' },
+      { id:6, name:'Magic Keyboard', emoji:'⌨️', price:799, orig:999, color:'#d1fae5' },
+      { id:7, name:'Studio Display', emoji:'🖥️', price:12999, orig:14999, color:'#e0e7ff' },
+      { id:8, name:'MagSafe 充电器', emoji:'🔌', price:299, orig:399, color:'#fff7ed' },
+      { id:9, name:'AirTag (4件装)', emoji:'📍', price:649, orig:799, color:'#ecfdf5' },
+    ];
+    let sortedProducts = [...products];
+    const cart = {};
+
+    function sortProducts(mode) {
+      if (mode === 'price-asc') sortedProducts = [...products].sort((a,b) => a.price-b.price);
+      else if (mode === 'price-desc') sortedProducts = [...products].sort((a,b) => b.price-a.price);
+      else sortedProducts = [...products];
+      renderProducts();
+    }
+
+    function renderProducts() {
+      const grid = document.getElementById('products-grid');
+      grid.innerHTML = sortedProducts.map(p => `
+        <div class="product-card" data-acp-type="card" data-acp-id="product-${p.id}">
+          <div class="product-img" style="background:${p.color}" data-acp-type="image" data-acp-id="img-${p.id}">${p.emoji}</div>
+          <div class="product-info">
+            <div class="product-name">${p.name}</div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="product-price">¥${p.price}</span>
+              <span class="product-original">¥${p.orig}</span>
+            </div>
+            <button class="btn btn-primary w-full btn-sm" data-acp-type="button" data-acp-id="add-to-cart-${p.id}"
+                    onclick="addToCart(${p.id})">加入购物车</button>
+          </div>
+        </div>`).join('');
+    }
+    renderProducts();
+
+    function addToCart(id) {
+      const p = products.find(x => x.id === id);
+      if (cart[id]) cart[id].qty++;
+      else cart[id] = { ...p, qty: 1 };
+      renderCart();
+      Toast.success(`${p.emoji} ${p.name} 已加入购物车`);
+    }
+
+    function renderCart() {
+      const items = Object.values(cart).filter(x => x.qty > 0);
+      const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+      const count = items.reduce((s, i) => s + i.qty, 0);
+      document.getElementById('cart-count').textContent = count;
+      document.getElementById('empty-cart-msg').style.display = items.length ? 'none' : 'block';
+      document.getElementById('cart-total-row').style.display = items.length ? 'block' : 'none';
+      document.getElementById('checkout-btn').style.display = items.length ? 'block' : 'none';
+      document.getElementById('cart-total').textContent = `¥${total.toLocaleString()}`;
+      const container = document.getElementById('cart-items');
+      const existing = container.querySelectorAll('.cart-item');
+      existing.forEach(e => e.remove());
+      items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'cart-item';
+        el.setAttribute('data-acp-type', 'cart-item');
+        el.setAttribute('data-acp-id', `cart-item-${item.id}`);
+        el.innerHTML = `
+          <div class="cart-item-emoji">${item.emoji}</div>
+          <div class="cart-item-body">
+            <div class="cart-item-name">${item.name}</div>
+            <div class="cart-item-price">¥${item.price} × ${item.qty}</div>
+          </div>
+          <div class="qty-ctrl">
+            <button class="qty-btn" data-acp-type="button" data-acp-id="qty-minus-${item.id}"
+                    onclick="changeQty(${item.id},-1)">−</button>
+            <span class="qty-num" data-acp-type="text">${item.qty}</span>
+            <button class="qty-btn" data-acp-type="button" data-acp-id="qty-plus-${item.id}"
+                    onclick="changeQty(${item.id},+1)">+</button>
+          </div>`;
+        container.appendChild(el);
+      });
+    }
+
+    function changeQty(id, delta) {
+      cart[id].qty += delta;
+      if (cart[id].qty <= 0) delete cart[id];
+      renderCart();
+    }
+
+    // Carousel
+    let slide = 0, total = 3;
+    function goSlide(n) {
+      slide = n;
+      document.getElementById('carousel-track').style.transform = `translateX(-${slide*100}%)`;
+      document.querySelectorAll('.dot').forEach((d,i) => d.classList.toggle('active', i===slide));
+    }
+    function nextSlide() { goSlide((slide+1)%total); }
+    function prevSlide() { goSlide((slide-1+total)%total); }
+    // Auto slide
+    setInterval(nextSlide, 3500);
+
+    // Swipe carousel (A12)
+    let touchStartX = 0;
+    document.querySelector('.carousel').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    document.querySelector('.carousel').addEventListener('touchend', e => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 40) dx < 0 ? nextSlide() : prevSlide();
+    });
+
+    // Checkout steps
+    const steps = [
+      { label: '填写地址', id: 'address' },
+      { label: '选择支付', id: 'payment' },
+      { label: '确认订单', id: 'confirm' }
+    ];
+    let currentStep = 0;
+
+    function renderStepper() {
+      const el = document.getElementById('checkout-stepper');
+      el.innerHTML = '';
+      steps.forEach((s, i) => {
+        if (i > 0) {
+          const line = document.createElement('div');
+          line.className = `step-line${i <= currentStep ? ' done' : ''}`;
+          el.appendChild(line);
+        }
+        const step = document.createElement('div');
+        step.className = 'step';
+        const circleClass = i < currentStep ? 'done' : i === currentStep ? 'active' : '';
+        step.innerHTML = `
+          <div class="step-circle ${circleClass}" data-acp-type="step" data-acp-id="step-${s.id}">
+            ${i < currentStep ? '✓' : i+1}
+          </div>
+          <div class="step-label">${s.label}</div>`;
+        el.appendChild(step);
+      });
+    }
+
+    const stepContents = [
+      `<div class="form-group"><label class="form-label">收件人</label>
+        <input type="text" class="form-input" placeholder="姓名" data-acp-type="input" data-acp-id="checkout-name"></div>
+       <div class="form-group"><label class="form-label">地址</label>
+        <input type="text" class="form-input" placeholder="详细地址" data-acp-type="input" data-acp-id="checkout-addr"></div>
+       <div class="flex justify-end mt-2"><button class="btn btn-primary" data-acp-type="button" data-acp-id="next-step-1" onclick="nextStep()">下一步 →</button></div>`,
+      `<div style="margin-bottom:16px;">
+        <label class="radio-item mb-2" style="display:flex;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;">
+          <input type="radio" name="pay" value="alipay" data-acp-type="radio" data-acp-id="pay-alipay" checked> 支付宝</label>
+        <label class="radio-item" style="display:flex;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;">
+          <input type="radio" name="pay" value="wechat" data-acp-type="radio" data-acp-id="pay-wechat"> 微信支付</label>
+       </div>
+       <div class="flex justify-between mt-2">
+        <button class="btn btn-secondary" data-acp-type="button" data-acp-id="prev-step-2" onclick="prevStep()">← 返回</button>
+        <button class="btn btn-primary" data-acp-type="button" data-acp-id="next-step-2" onclick="nextStep()">下一步 →</button>
+       </div>`,
+      `<div class="notification-banner success mb-4" style="margin:0 0 16px;">
+         <span>✓ 请确认您的订单信息</span></div>
+       <div style="padding:12px;background:var(--bg);border-radius:8px;margin-bottom:16px;">
+         <div class="flex justify-between mb-2"><span>商品总计</span><span style="font-weight:600;" id="final-total">-</span></div>
+         <div class="flex justify-between mb-2"><span>运费</span><span>免运费</span></div>
+         <div class="flex justify-between" style="font-size:16px;font-weight:700;border-top:1px solid var(--border);padding-top:8px;">
+           <span>应付金额</span><span style="color:var(--danger);" id="final-total2">-</span></div>
+       </div>
+       <div class="flex justify-between">
+        <button class="btn btn-secondary" data-acp-type="button" data-acp-id="prev-step-3" onclick="prevStep()">← 返回</button>
+        <button class="btn btn-primary" data-acp-type="button" data-acp-id="submit-order" onclick="submitOrder()">提交订单 💳</button>
+       </div>`
+    ];
+
+    function startCheckout() {
+      currentStep = 0;
+      document.getElementById('checkout-panel').style.display = 'block';
+      document.getElementById('checkout-panel').scrollIntoView({ behavior: 'smooth' });
+      renderStepper();
+      document.getElementById('checkout-step-content').innerHTML = stepContents[0];
+    }
+
+    function nextStep() {
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        renderStepper();
+        document.getElementById('checkout-step-content').innerHTML = stepContents[currentStep];
+        if (currentStep === 2) {
+          const total = Object.values(cart).reduce((s,i) => s+i.price*i.qty, 0);
+          document.getElementById('final-total').textContent = `¥${total.toLocaleString()}`;
+          document.getElementById('final-total2').textContent = `¥${total.toLocaleString()}`;
+        }
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 0) {
+        currentStep--;
+        renderStepper();
+        document.getElementById('checkout-step-content').innerHTML = stepContents[currentStep];
+      }
+    }
+
+    function submitOrder() {
+      const overlay = document.getElementById('loading-overlay');
+      const bar = document.getElementById('progress-bar');
+      overlay.classList.add('show');
+      document.getElementById('loading-text').textContent = '正在处理订单...';
+      let pct = 0;
+      const iv = setInterval(() => {
+        pct += 15;
+        bar.style.width = pct + '%';
+        if (pct >= 100) {
+          clearInterval(iv);
+          setTimeout(() => {
+            overlay.classList.remove('show');
+            document.getElementById('checkout-panel').style.display = 'none';
+            Object.keys(cart).forEach(k => delete cart[k]);
+            renderCart();
+            Toast.success('🎉 订单提交成功！感谢您的购买');
+          }, 400);
+        }
+      }, 200);
+    }
+  </script>
+</body>
+</html>

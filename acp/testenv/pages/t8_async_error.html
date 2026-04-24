@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T8 异步状态+错误 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    .main { max-width: 860px; margin: 0 auto; padding: 24px; }
+    .demo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    @media (max-width: 680px) { .demo-grid { grid-template-columns: 1fr; } }
+    .demo-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .demo-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+    .demo-subtitle { font-size: 11px; color: var(--text-muted); }
+
+    /* Loading states */
+    .state-box { min-height: 80px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 8px; }
+
+    /* Skeleton screens (E32 S12) */
+    .sk-block { margin-bottom: 12px; }
+    .sk-line { height: 14px; border-radius: 4px; margin-bottom: 8px; }
+    .sk-circle { width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0; }
+    .sk-card-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .sk-card-body { flex: 1; }
+
+    /* Error states */
+    .error-state { text-align: center; padding: 24px; }
+    .error-icon { font-size: 40px; margin-bottom: 12px; }
+    .error-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--danger); }
+    .error-message { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+
+    /* Network offline indicator */
+    .offline-indicator {
+      background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px;
+      padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: #991b1b;
+    }
+    .online-indicator {
+      background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;
+      padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: #166534;
+    }
+
+    /* Form errors */
+    .form-field-error { animation: shake 0.3s ease; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60% { transform: translateX(-4px); }
+      40%,80% { transform: translateX(4px); }
+    }
+
+    /* Permission denied */
+    .permission-box {
+      background: #fef9c3; border: 1px solid #fde047; border-radius: 12px;
+      padding: 20px; text-align: center;
+    }
+    .permission-icon { font-size: 36px; margin-bottom: 8px; }
+
+    /* Progress states */
+    .progress-demo { margin-bottom: 12px; }
+    .progress-label { font-size: 13px; margin-bottom: 4px; display: flex; justify-content: space-between; }
+
+    /* Success state */
+    .success-state { text-align: center; padding: 20px; }
+    .success-circle {
+      width: 64px; height: 64px; border-radius: 50%; background: #d1fae5;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; margin: 0 auto 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>T8 异步状态 + 错误处理</h1>
+    <span class="coverage">E30, E32, E33 / A01 / S11, S12, S15-S18</span>
+  </div>
+
+  <div class="main">
+
+    <!-- Row 1 -->
+    <div class="demo-grid mb-4">
+
+      <!-- Loading + Skeleton (S11, S12) -->
+      <div class="demo-card">
+        <div class="demo-title">💀 骨架屏加载 (S11, S12)</div>
+        <div id="skeleton-demo" data-acp-type="skeleton-container" data-acp-id="skeleton-demo">
+          <!-- Skeleton state -->
+          <div id="sk-state">
+            <div class="sk-card-row">
+              <div class="skeleton sk-circle" data-acp-type="skeleton" data-acp-id="sk-avatar"></div>
+              <div class="sk-card-body">
+                <div class="skeleton sk-line" style="width:70%" data-acp-type="skeleton" data-acp-id="sk-name"></div>
+                <div class="skeleton sk-line" style="width:50%" data-acp-type="skeleton" data-acp-id="sk-role"></div>
+              </div>
+            </div>
+            <div class="skeleton sk-line w-full" data-acp-type="skeleton"></div>
+            <div class="skeleton sk-line" style="width:85%" data-acp-type="skeleton"></div>
+            <div class="skeleton sk-line" style="width:60%" data-acp-type="skeleton"></div>
+          </div>
+          <div id="sk-content" style="display:none;">
+            <div class="sk-card-row">
+              <div class="avatar" style="background:var(--primary);width:44px;height:44px;">张</div>
+              <div><div style="font-weight:600;">张明 · 产品经理</div><div class="text-muted text-sm">北京 · 5年经验</div></div>
+            </div>
+            <p style="font-size:13px;line-height:1.6;margin-top:8px;">专注于 AI 产品设计，热爱构建改变用户体验的产品。曾主导多个千万级用户产品从0到1。</p>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button class="btn btn-primary btn-sm" onclick="showSkeleton()"
+                  data-acp-type="button" data-acp-id="show-skeleton">重置骨架屏</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadContent()"
+                  data-acp-type="button" data-acp-id="load-content">加载内容</button>
+        </div>
+      </div>
+
+      <!-- Loading Spinner (S11) -->
+      <div class="demo-card">
+        <div class="demo-title">⏳ 加载状态 (S11)</div>
+        <div id="loading-state-box" class="state-box" data-acp-type="loading-state" data-acp-id="loading-demo">
+          <div id="loading-display">
+            <div style="text-align:center;">
+              <div class="spinner" style="margin:0 auto;"></div>
+              <div style="margin-top:10px;font-size:13px;color:var(--text-muted);" id="loading-msg">正在加载数据...</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-2 flex-wrap">
+          <button class="btn btn-primary btn-sm" onclick="simulateLoad('success')"
+                  data-acp-type="button" data-acp-id="load-success">模拟成功</button>
+          <button class="btn btn-danger btn-sm" onclick="simulateLoad('error')"
+                  data-acp-type="button" data-acp-id="load-error">模拟失败</button>
+          <button class="btn btn-secondary btn-sm" onclick="simulateLoad('loading')"
+                  data-acp-type="button" data-acp-id="load-reset">重置</button>
+        </div>
+      </div>
+
+      <!-- Form validation errors (S15) -->
+      <div class="demo-card">
+        <div class="demo-title">❌ 表单验证错误 (S15)</div>
+        <form id="err-form" novalidate>
+          <div class="form-group">
+            <label class="form-label">用户名</label>
+            <input id="err-username" type="text" class="form-input" placeholder="3-20个字符"
+                   data-acp-type="input" data-acp-id="err-username">
+            <span class="form-error" id="err-username-msg"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">邮箱</label>
+            <input id="err-email" type="email" class="form-input" placeholder="user@example.com"
+                   data-acp-type="input" data-acp-id="err-email">
+            <span class="form-error" id="err-email-msg"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label">手机号</label>
+            <input id="err-phone" type="tel" class="form-input" placeholder="11位手机号"
+                   data-acp-type="input" data-acp-id="err-phone">
+            <span class="form-error" id="err-phone-msg"></span>
+          </div>
+          <!-- Form-level error banner (E33) -->
+          <div id="form-error-banner" class="notification-banner error" style="display:none;"
+               data-acp-type="notification-banner" data-acp-id="form-error-banner">
+            <span id="form-error-text">请修正以上错误后重新提交</span>
+          </div>
+          <div class="flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary btn-sm"
+                    data-acp-type="button" data-acp-id="submit-err-form">提交</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="clearFormErrors()"
+                    data-acp-type="button" data-acp-id="clear-errors">清除错误</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Network error + retry (S16) -->
+      <div class="demo-card">
+        <div class="demo-title">📡 网络状态 (S16)</div>
+        <div id="network-status-box">
+          <div id="network-indicator" class="online-indicator mb-4"
+               data-acp-type="network-indicator" data-acp-id="network-status">
+            <span>🟢</span> 网络连接正常
+          </div>
+        </div>
+        <div id="network-content" data-acp-type="content-area" data-acp-id="network-content">
+          <div style="padding:16px;background:var(--bg);border-radius:8px;font-size:13px;">
+            <div style="font-weight:600;margin-bottom:4px;">实时数据流</div>
+            <div class="text-muted">最后更新: <span id="last-update">刚刚</span></div>
+            <div style="margin-top:8px;font-family:monospace;font-size:12px;background:#f3f4f6;padding:8px;border-radius:4px;" id="data-stream">
+              数据加载中...
+            </div>
+          </div>
+        </div>
+        <div id="network-error-box" style="display:none;" data-acp-type="error-state" data-acp-id="network-error">
+          <div class="error-state">
+            <div class="error-icon">📵</div>
+            <div class="error-title">网络连接失败</div>
+            <div class="error-message">无法连接到服务器，请检查网络连接</div>
+            <button class="btn btn-primary btn-sm" onclick="retryNetwork()"
+                    data-acp-type="button" data-acp-id="retry-btn">重试</button>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button class="btn btn-danger btn-sm" onclick="simulateOffline()"
+                  data-acp-type="button" data-acp-id="go-offline">模拟断网</button>
+          <button class="btn btn-secondary btn-sm" onclick="simulateOnline()"
+                  data-acp-type="button" data-acp-id="go-online">恢复连接</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Row 2 -->
+    <div class="demo-grid mb-4">
+
+      <!-- Empty State (S17) -->
+      <div class="demo-card">
+        <div class="demo-title">📭 空状态 (S17)</div>
+        <div id="empty-state-demo">
+          <div class="empty-state" data-acp-type="empty-state" data-acp-id="empty-inbox">
+            <div class="empty-state-icon">📭</div>
+            <div class="empty-state-title">收件箱为空</div>
+            <p class="text-muted" style="margin-bottom:16px;font-size:13px;">暂时没有新消息，喝杯咖啡放松一下 ☕</p>
+            <button class="btn btn-primary btn-sm" onclick="addMessage()"
+                    data-acp-type="button" data-acp-id="add-message">添加消息</button>
+          </div>
+          <div id="message-list" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Permission denied (S18) -->
+      <div class="demo-card">
+        <div class="demo-title">🔒 权限不足 (S18)</div>
+        <div id="permission-demo">
+          <div class="permission-box" data-acp-type="permission-denied" data-acp-id="permission-box">
+            <div class="permission-icon">🔐</div>
+            <div style="font-weight:600;margin-bottom:4px;">访问受限</div>
+            <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">你没有权限查看此内容。请联系管理员申请访问权限。</div>
+            <div class="flex gap-2 justify-center">
+              <button class="btn btn-primary btn-sm" onclick="requestAccess()"
+                      data-acp-type="button" data-acp-id="request-access">申请权限</button>
+              <button class="btn btn-secondary btn-sm" onclick="grantAccess()"
+                      data-acp-type="button" data-acp-id="grant-access">授权查看</button>
+            </div>
+          </div>
+          <div id="permission-content" style="display:none;">
+            <div class="notification-banner success" data-acp-type="notification-banner">
+              <span>✓ 已获得访问权限</span>
+            </div>
+            <div style="padding:12px;background:var(--bg);border-radius:8px;font-size:13px;margin-top:8px;">
+              🔓 受保护内容：API 密钥 sk-***-abc123，仅限已授权用户查看
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress Bars (E32 S21) -->
+      <div class="demo-card">
+        <div class="demo-title">📊 进度条 (E32)</div>
+
+        <div class="progress-demo">
+          <div class="progress-label"><span>文件上传</span><span id="pct-upload">0%</span></div>
+          <div class="progress" data-acp-type="progress" data-acp-id="progress-upload">
+            <div class="progress-bar" id="bar-upload" style="width:0%;background:var(--primary)"></div>
+          </div>
+        </div>
+
+        <div class="progress-demo">
+          <div class="progress-label"><span>下载进度</span><span id="pct-download">65%</span></div>
+          <div class="progress" data-acp-type="progress" data-acp-id="progress-download">
+            <div class="progress-bar" id="bar-download" style="width:65%;background:var(--success)"></div>
+          </div>
+        </div>
+
+        <div class="progress-demo">
+          <div class="progress-label"><span>不确定进度</span><span style="color:var(--text-muted)">处理中...</span></div>
+          <div class="progress" data-acp-type="progress" data-acp-id="progress-indeterminate">
+            <div class="progress-bar indeterminate" id="bar-indeterminate" style="background:var(--warning)"></div>
+          </div>
+        </div>
+
+        <div class="flex gap-2 mt-2">
+          <button class="btn btn-primary btn-sm" onclick="startUpload()"
+                  data-acp-type="button" data-acp-id="start-upload">模拟上传</button>
+          <button class="btn btn-secondary btn-sm" onclick="resetProgress()"
+                  data-acp-type="button" data-acp-id="reset-progress">重置</button>
+        </div>
+      </div>
+
+      <!-- Toast / Snackbar gallery (E30) -->
+      <div class="demo-card">
+        <div class="demo-title">🍞 Toast / Snackbar (E30)</div>
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn btn-sm" style="background:#d1fae5;color:#065f46;" onclick="Toast.success('操作成功！数据已保存')"
+                  data-acp-type="button" data-acp-id="toast-success">✓ 成功</button>
+          <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;" onclick="Toast.error('操作失败！服务器返回错误')"
+                  data-acp-type="button" data-acp-id="toast-error">✕ 失败</button>
+          <button class="btn btn-sm" style="background:#fef3c7;color:#92400e;" onclick="Toast.warning('注意：此操作不可撤销')"
+                  data-acp-type="button" data-acp-id="toast-warning">⚠ 警告</button>
+          <button class="btn btn-sm" style="background:#dbeafe;color:#1e40af;" onclick="Toast.info('提示：新版本已可用')"
+                  data-acp-type="button" data-acp-id="toast-info">ℹ 信息</button>
+        </div>
+        <!-- Notification banners gallery (E33) -->
+        <div style="margin-top:12px;">
+          <div class="demo-subtitle mb-2">通知横幅 (E33)</div>
+          <div id="banners-demo">
+            <div class="notification-banner success mb-2" data-acp-type="notification-banner" data-acp-id="banner-success">
+              <span>✓ 账号验证成功</span>
+              <button class="btn btn-ghost btn-sm" onclick="this.closest('.notification-banner').style.display='none'"
+                      data-acp-type="button">✕</button>
+            </div>
+            <div class="notification-banner warning mb-2" data-acp-type="notification-banner" data-acp-id="banner-warning">
+              <span>⚠ 存储空间即将用满（89%）</span>
+              <button class="btn btn-ghost btn-sm" onclick="this.closest('.notification-banner').style.display='none'"
+                      data-acp-type="button">✕</button>
+            </div>
+            <div class="notification-banner error" data-acp-type="notification-banner" data-acp-id="banner-error">
+              <span>✕ 支付失败，请重试</span>
+              <button class="btn btn-ghost btn-sm" onclick="this.closest('.notification-banner').style.display='none'"
+                      data-acp-type="button">✕</button>
+            </div>
+          </div>
+          <button class="btn btn-secondary btn-sm mt-2" onclick="resetBanners()"
+                  data-acp-type="button" data-acp-id="reset-banners">重置横幅</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="toast-container"></div>
+  <script src="../static/testenv.js"></script>
+  <script src="../auto_label.js"></script>
+  <script>
+    // ── Skeleton ─────────────────────────────────────────────────────────────
+    function showSkeleton() {
+      document.getElementById('sk-state').style.display = 'block';
+      document.getElementById('sk-content').style.display = 'none';
+    }
+    function loadContent() {
+      Toast.info('正在加载...');
+      setTimeout(() => {
+        document.getElementById('sk-state').style.display = 'none';
+        document.getElementById('sk-content').style.display = 'block';
+        Toast.success('内容加载完成');
+      }, 1500);
+    }
+
+    // ── Load State ────────────────────────────────────────────────────────────
+    function simulateLoad(state) {
+      const box = document.getElementById('loading-display');
+      if (state === 'loading') {
+        box.innerHTML = `<div style="text-align:center;"><div class="spinner" style="margin:0 auto;"></div>
+          <div style="margin-top:10px;font-size:13px;color:var(--text-muted);">正在加载数据...</div></div>`;
+        return;
+      }
+      if (state === 'success') {
+        box.innerHTML = `<div class="success-state">
+          <div class="success-circle">✓</div>
+          <div style="font-weight:600;color:var(--success);">加载成功！</div>
+          <div class="text-muted text-sm mt-2">共获取 42 条数据记录</div>
+        </div>`;
+        Toast.success('数据加载成功');
+      } else {
+        box.innerHTML = `<div class="error-state">
+          <div class="error-icon">⚠️</div>
+          <div class="error-title">加载失败</div>
+          <div class="error-message">请求超时，请稍后重试</div>
+          <button class="btn btn-primary btn-sm" onclick="simulateLoad('loading')" data-acp-type="button" data-acp-id="retry-load">重试</button>
+        </div>`;
+        Toast.error('加载失败');
+      }
+    }
+
+    // ── Form Errors ───────────────────────────────────────────────────────────
+    document.getElementById('err-form').addEventListener('submit', e => {
+      e.preventDefault();
+      let hasError = false;
+      const checks = [
+        { id:'err-username', msgId:'err-username-msg', validate: v => { if (!v) return '用户名不能为空'; if (v.length < 3) return '至少3个字符'; if (v.length > 20) return '最多20个字符'; return ''; } },
+        { id:'err-email', msgId:'err-email-msg', validate: v => { if (!v) return '邮箱不能为空'; if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return '邮箱格式不正确'; return ''; } },
+        { id:'err-phone', msgId:'err-phone-msg', validate: v => { if (!v) return '手机号不能为空'; if (!/^1[3-9]\d{9}$/.test(v)) return '请输入有效的11位手机号'; return ''; } },
+      ];
+      checks.forEach(c => {
+        const el = document.getElementById(c.id);
+        const msg = c.validate(el.value.trim());
+        const msgEl = document.getElementById(c.msgId);
+        if (msg) {
+          el.classList.add('error', 'form-field-error');
+          msgEl.textContent = msg; hasError = true;
+          setTimeout(() => el.classList.remove('form-field-error'), 400);
+        } else { el.classList.remove('error'); msgEl.textContent = ''; }
+      });
+      const banner = document.getElementById('form-error-banner');
+      if (hasError) { banner.style.display = 'flex'; Toast.error('表单有错误，请检查'); }
+      else { banner.style.display = 'none'; Toast.success('表单验证通过！'); }
+    });
+    function clearFormErrors() {
+      ['err-username','err-email','err-phone'].forEach(id => {
+        document.getElementById(id).classList.remove('error');
+        document.getElementById(id + '-msg').textContent = '';
+      });
+      document.getElementById('form-error-banner').style.display = 'none';
+    }
+
+    // ── Network ───────────────────────────────────────────────────────────────
+    let dataInterval = setInterval(updateStream, 2000);
+    function updateStream() {
+      const streams = ['{ users: 1247, online: 83 }','{ orders: 302, pending: 12 }','{ latency: 24ms, errors: 0 }','{ traffic: 2.4 MB/s }'];
+      document.getElementById('data-stream').textContent = streams[Math.floor(Math.random()*streams.length)];
+      document.getElementById('last-update').textContent = '刚刚';
+    }
+    function simulateOffline() {
+      clearInterval(dataInterval);
+      document.getElementById('network-indicator').className = 'offline-indicator mb-4';
+      document.getElementById('network-indicator').innerHTML = '<span>🔴</span> 网络已断开';
+      document.getElementById('network-content').style.display = 'none';
+      document.getElementById('network-error-box').style.display = 'block';
+      Toast.error('网络连接已断开');
+    }
+    function simulateOnline() {
+      document.getElementById('network-indicator').className = 'online-indicator mb-4';
+      document.getElementById('network-indicator').innerHTML = '<span>🟢</span> 网络连接正常';
+      document.getElementById('network-content').style.display = 'block';
+      document.getElementById('network-error-box').style.display = 'none';
+      dataInterval = setInterval(updateStream, 2000);
+      Toast.success('网络已恢复');
+    }
+    function retryNetwork() {
+      Toast.info('正在重新连接...');
+      setTimeout(simulateOnline, 1500);
+    }
+
+    // ── Empty State / Messages ─────────────────────────────────────────────────
+    const messages = [
+      { from:'Alice', text:'下午会议已确认 ✓', time:'10:30' },
+      { from:'Bob', text:'代码审查已完成', time:'11:15' },
+      { from:'Carol', text:'新需求文档已上传', time:'14:00' },
+    ];
+    let msgIdx = 0;
+    function addMessage() {
+      if (msgIdx < messages.length) {
+        document.querySelector('[data-acp-id="empty-inbox"]').style.display = 'none';
+        const list = document.getElementById('message-list');
+        list.style.display = 'block';
+        const m = messages[msgIdx++];
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:10px;border-bottom:1px solid var(--border);font-size:13px;';
+        item.setAttribute('data-acp-type', 'message-item');
+        item.innerHTML = `<div style="display:flex;justify-content:space-between;"><strong>${m.from}</strong><span class="text-muted">${m.time}</span></div><div>${m.text}</div>`;
+        list.appendChild(item);
+        Toast.info(`新消息来自 ${m.from}`);
+      } else {
+        Toast.warning('没有更多消息了');
+      }
+    }
+
+    // ── Permission ─────────────────────────────────────────────────────────────
+    function requestAccess() {
+      Toast.info('权限申请已发送，等待管理员审批');
+    }
+    function grantAccess() {
+      document.querySelector('[data-acp-id="permission-box"]').style.display = 'none';
+      document.getElementById('permission-content').style.display = 'block';
+      Toast.success('访问权限已授予');
+    }
+
+    // ── Progress ──────────────────────────────────────────────────────────────
+    let uploadInterval;
+    function startUpload() {
+      let pct = 0;
+      clearInterval(uploadInterval);
+      uploadInterval = setInterval(() => {
+        pct = Math.min(100, pct + Math.random() * 8);
+        const p = Math.round(pct);
+        document.getElementById('bar-upload').style.width = p + '%';
+        document.getElementById('pct-upload').textContent = p + '%';
+        if (pct >= 100) { clearInterval(uploadInterval); Toast.success('上传完成！'); }
+      }, 150);
+    }
+    function resetProgress() {
+      clearInterval(uploadInterval);
+      document.getElementById('bar-upload').style.width = '0%';
+      document.getElementById('pct-upload').textContent = '0%';
+    }
+
+    // ── Banners reset ─────────────────────────────────────────────────────────
+    function resetBanners() {
+      document.querySelectorAll('#banners-demo .notification-banner').forEach(b => b.style.display = 'flex');
+    }
+  </script>
+</body>
+</html>

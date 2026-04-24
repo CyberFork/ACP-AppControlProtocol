@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T5 导航+菜单 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); }
+
+    /* Top Navbar (E12) */
+    .navbar {
+      background: #1e1b4b; color: white; padding: 0 20px;
+      display: flex; align-items: center; height: 56px;
+      position: sticky; top: 0; z-index: 200; gap: 4px;
+    }
+    .nav-logo { font-weight: 800; font-size: 18px; color: #a78bfa; margin-right: 16px; white-space: nowrap; }
+    .nav-items { display: flex; height: 100%; flex: 1; }
+    .nav-item {
+      position: relative; display: flex; align-items: center;
+      padding: 0 14px; cursor: pointer; font-size: 14px; color: rgba(255,255,255,0.8);
+      transition: background 0.15s; white-space: nowrap;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
+    .nav-item.active { color: #a78bfa; }
+    .nav-dropdown {
+      position: absolute; top: 100%; left: 0; background: white; color: var(--text);
+      border: 1px solid var(--border); border-radius: 0 0 8px 8px;
+      box-shadow: var(--shadow-lg); min-width: 180px; z-index: 300;
+      display: none; overflow: hidden;
+    }
+    .nav-item:hover .nav-dropdown { display: block; }
+    .dropdown-item {
+      padding: 10px 16px; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; gap: 8px; transition: background 0.1s;
+    }
+    .dropdown-item:hover { background: var(--bg); }
+    .dropdown-sep { height: 1px; background: var(--border); }
+    .nav-search {
+      display: flex; align-items: center; background: rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 6px 12px; gap: 8px; margin-right: 8px;
+    }
+    .nav-search input {
+      background: none; border: none; outline: none; color: white;
+      font-size: 13px; width: 140px; placeholder-color: rgba(255,255,255,0.5);
+    }
+    .nav-search input::placeholder { color: rgba(255,255,255,0.5); }
+    .nav-avatar {
+      width: 32px; height: 32px; border-radius: 50%; background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    }
+    .hamburger { display: none; background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 8px; }
+    @media (max-width: 768px) { .nav-items, .nav-search { display: none; } .hamburger { display: block; } }
+
+    /* Main layout */
+    .main-layout { display: flex; min-height: calc(100vh - 56px - 56px); }
+
+    /* Left tree sidebar (E14, S10) */
+    .tree-sidebar {
+      width: 220px; background: white; border-right: 1px solid var(--border);
+      padding: 16px; flex-shrink: 0; overflow-y: auto;
+    }
+    .tree-sidebar-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px; }
+    .tree-node { font-size: 13px; }
+    .tree-parent {
+      display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+      border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.1s;
+    }
+    .tree-parent:hover { background: var(--bg); }
+    .tree-parent .arrow { font-size: 10px; color: var(--text-muted); transition: transform 0.2s; }
+    .tree-parent.expanded .arrow { transform: rotate(90deg); }
+    .tree-children { padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.3s; }
+    .tree-children.open { max-height: 400px; }
+    .tree-leaf {
+      display: flex; align-items: center; gap: 6px; padding: 5px 8px;
+      border-radius: 6px; cursor: pointer; color: var(--text-muted); font-size: 13px;
+      transition: background 0.1s; text-decoration: none;
+    }
+    .tree-leaf:hover { background: var(--bg); color: var(--text); }
+    .tree-leaf.active { background: #ede9fe; color: var(--primary); font-weight: 500; }
+
+    /* Content area */
+    .content-area { flex: 1; padding: 24px; overflow: auto; }
+
+    /* Breadcrumb (E15) */
+    .breadcrumb-bar { margin-bottom: 16px; }
+
+    /* Bottom Navigation (E13) */
+    .bottom-nav {
+      background: white; border-top: 1px solid var(--border);
+      display: flex; height: 56px;
+      position: sticky; bottom: 0; z-index: 200;
+    }
+    .bottom-nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 2px; cursor: pointer; font-size: 11px;
+      color: var(--text-muted); transition: color 0.15s; border: none; background: none;
+    }
+    .bottom-nav-item:hover { color: var(--primary); }
+    .bottom-nav-item.active { color: var(--primary); }
+    .bottom-nav-icon { font-size: 20px; }
+
+    /* Drawer (E14, S08) */
+    .drawer-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 400; display: none;
+    }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; top: 0; left: -280px; width: 280px; height: 100%;
+      background: white; z-index: 401; box-shadow: var(--shadow-lg);
+      transition: left 0.3s ease; overflow-y: auto;
+    }
+    .drawer-overlay.open .drawer { left: 0; }
+    .drawer-header { background: #1e1b4b; color: white; padding: 20px 16px; font-size: 18px; font-weight: 700; }
+    .drawer-item { padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 14px; }
+    .drawer-item:hover { background: var(--bg); }
+
+    /* Page sections */
+    .section { margin-bottom: 24px; }
+    .section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); margin-bottom: 8px; }
+
+    /* Search results */
+    .search-results {
+      background: white; border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px; box-shadow: var(--shadow); display: none;
+    }
+    .search-result-item { padding: 8px 12px; font-size: 13px; cursor: pointer; border-radius: 6px; }
+    .search-result-item:hover { background: var(--bg); }
+  </style>
+</head>
+<body>
+
+<!-- Top Navbar (E12) -->
+<nav class="navbar" data-acp-type="navbar" data-acp-id="top-navbar">
+  <button class="hamburger" onclick="openDrawer()" data-acp-type="button" data-acp-id="hamburger">☰</button>
+  <div class="nav-logo">ACP</div>
+
+  <div class="nav-items">
+    <!-- Nav item with dropdown (E16, A05 hover) -->
+    <div class="nav-item active" data-acp-type="nav-item" data-acp-id="nav-home">首页</div>
+    <div class="nav-item" data-acp-type="nav-item" data-acp-id="nav-products">
+      产品 ▾
+      <div class="nav-dropdown" data-acp-type="dropdown" data-acp-id="products-dropdown">
+        <div class="dropdown-item" data-acp-type="dropdown-item" data-acp-id="dd-hardware" onclick="setPage('硬件产品')">🖥 硬件产品</div>
+        <div class="dropdown-item" data-acp-type="dropdown-item" data-acp-id="dd-software" onclick="setPage('软件服务')">💻 软件服务</div>
+        <div class="dropdown-item" data-acp-type="dropdown-item" data-acp-id="dd-cloud" onclick="setPage('云服务')">☁️ 云服务</div>
+        <div class="dropdown-sep"></div>
+        <div class="dropdown-item" data-acp-type="dropdown-item" data-acp-id="dd-all" onclick="setPage('全部产品')">📦 全部产品</div>
+      </div>
+    </div>
+    <div class="nav-item" data-acp-type="nav-item" data-acp-id="nav-docs">
+      文档 ▾
+      <div class="nav-dropdown" data-acp-type="dropdown" data-acp-id="docs-dropdown">
+        <div class="dropdown-item" data-acp-type="dropdown-item" onclick="setPage('快速开始')">🚀 快速开始</div>
+        <div class="dropdown-item" data-acp-type="dropdown-item" onclick="setPage('API 参考')">📄 API 参考</div>
+        <div class="dropdown-item" data-acp-type="dropdown-item" onclick="setPage('示例')">💡 示例</div>
+      </div>
+    </div>
+    <div class="nav-item" data-acp-type="nav-item" data-acp-id="nav-about" onclick="setPage('关于我们')">关于</div>
+  </div>
+
+  <!-- Search (E02) -->
+  <div class="nav-search" style="position:relative;">
+    <span style="color:rgba(255,255,255,0.5);">🔍</span>
+    <input type="text" placeholder="搜索..." data-acp-type="input" data-acp-id="nav-search-input"
+           oninput="showSearchResults(this.value)" onfocus="showSearchResults(this.value)">
+    <div class="search-results" id="search-results" data-acp-type="dropdown" data-acp-id="search-dropdown"
+         style="position:absolute;top:calc(100% + 8px);left:0;right:0;min-width:240px;z-index:500;">
+    </div>
+  </div>
+
+  <div class="nav-avatar" data-acp-type="button" data-acp-id="user-menu-btn" onclick="Toast.info('用户菜单')">张</div>
+</nav>
+
+<div class="main-layout">
+  <!-- Left Tree Sidebar (E14, S10) -->
+  <div class="tree-sidebar" data-acp-type="sidebar" data-acp-id="tree-sidebar">
+    <div class="tree-sidebar-title">导航菜单</div>
+
+    <div class="tree-node" id="tree-root">
+      <div class="tree-parent expanded" data-acp-type="tree-node" data-acp-id="tree-tech" onclick="toggleTree(this)">
+        <span class="arrow">▶</span> 💻 技术
+      </div>
+      <div class="tree-children open" data-acp-type="tree-children">
+        <div class="tree-leaf active" data-acp-type="tree-leaf" data-acp-id="leaf-frontend" onclick="selectLeaf(this,'前端开发')">🎨 前端开发</div>
+        <div class="tree-leaf" data-acp-type="tree-leaf" data-acp-id="leaf-backend" onclick="selectLeaf(this,'后端开发')">⚙️ 后端开发</div>
+        <div class="tree-leaf" data-acp-type="tree-leaf" data-acp-id="leaf-devops" onclick="selectLeaf(this,'DevOps')">🔧 DevOps</div>
+        <div class="tree-node">
+          <div class="tree-parent" data-acp-type="tree-node" data-acp-id="tree-mobile" onclick="toggleTree(this)">
+            <span class="arrow">▶</span> 📱 移动端
+          </div>
+          <div class="tree-children">
+            <div class="tree-leaf" data-acp-type="tree-leaf" onclick="selectLeaf(this,'iOS')">🍎 iOS</div>
+            <div class="tree-leaf" data-acp-type="tree-leaf" onclick="selectLeaf(this,'Android')">🤖 Android</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tree-parent" data-acp-type="tree-node" data-acp-id="tree-product" onclick="toggleTree(this)" style="margin-top:4px;">
+        <span class="arrow">▶</span> 📦 产品
+      </div>
+      <div class="tree-children">
+        <div class="tree-leaf" data-acp-type="tree-leaf" onclick="selectLeaf(this,'产品设计')">✏️ 产品设计</div>
+        <div class="tree-leaf" data-acp-type="tree-leaf" onclick="selectLeaf(this,'用户研究')">🔬 用户研究</div>
+        <div class="tree-leaf" data-acp-type="tree-leaf" onclick="selectLeaf(this,'路线图')">🗺 路线图</div>
+      </div>
+
+      <div class="tree-parent" data-acp-type="tree-node" data-acp-id="tree-ops" onclick="toggleTree(this)" style="margin-top:4px;">
+        <span class="arrow">▶</span> 🏢 运营
+      </div>
+      <div class="tree-children">
+        <div class="tree-leaf" data-acp-type="tree-leaf" onclick="selectLeaf(this,'数据分析')">📊 数据分析</div>
+        <div class="tree-leaf" data-acp-type="tree-leaf" onclick="selectLeaf(this,'市场推广')">📣 市场推广</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content-area">
+    <!-- Breadcrumb (E15) -->
+    <div class="breadcrumb-bar">
+      <nav class="breadcrumb" data-acp-type="breadcrumb" data-acp-id="main-breadcrumb">
+        <span class="breadcrumb-item" data-acp-type="breadcrumb-item" onclick="setPage('首页');setBreadcrumb(['首页'])">首页</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-item" data-acp-type="breadcrumb-item" onclick="">技术</span>
+        <span class="breadcrumb-sep">/</span>
+        <span class="breadcrumb-item" data-acp-type="breadcrumb-item">前端开发</span>
+      </nav>
+    </div>
+
+    <!-- Page content -->
+    <div class="card mb-4">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px;" id="page-title">前端开发</div>
+      <p class="text-muted" id="page-desc">当前页面：前端开发。点击左侧菜单或顶部导航切换页面。</p>
+    </div>
+
+    <!-- Quick nav cards -->
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-muted);letter-spacing:0.08em;margin-bottom:12px;">功能演示</div>
+    <div class="grid grid-3 gap-4">
+      <div class="card" style="cursor:pointer;" data-acp-type="card" onclick="openDrawer()">
+        <div style="font-size:24px;margin-bottom:8px;">📱</div>
+        <div style="font-weight:600;margin-bottom:4px;">侧边抽屉</div>
+        <div class="text-muted text-sm">点击打开汉堡菜单</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-acp-type="card" onclick="document.querySelector('.nav-item[data-acp-id=nav-products]').dispatchEvent(new MouseEvent('mouseenter'))">
+        <div style="font-size:24px;margin-bottom:8px;">📋</div>
+        <div style="font-weight:600;margin-bottom:4px;">下拉菜单</div>
+        <div class="text-muted text-sm">悬停顶部"产品"</div>
+      </div>
+      <div class="card" style="cursor:pointer;" data-acp-type="card" onclick="toggleTree(document.querySelector('.tree-parent'))">
+        <div style="font-size:24px;margin-bottom:8px;">🌳</div>
+        <div style="font-weight:600;margin-bottom:4px;">树形菜单</div>
+        <div class="text-muted text-sm">展开/折叠左侧树</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Navigation (E13) -->
+<nav class="bottom-nav" data-acp-type="bottom-nav" data-acp-id="bottom-nav">
+  <button class="bottom-nav-item active" data-acp-type="bottom-nav-item" data-acp-id="bnav-home" onclick="activateBottomNav(this)">
+    <span class="bottom-nav-icon">🏠</span>首页
+  </button>
+  <button class="bottom-nav-item" data-acp-type="bottom-nav-item" data-acp-id="bnav-explore" onclick="activateBottomNav(this)">
+    <span class="bottom-nav-icon">🔍</span>探索
+  </button>
+  <button class="bottom-nav-item" data-acp-type="bottom-nav-item" data-acp-id="bnav-notify" onclick="activateBottomNav(this)">
+    <span class="bottom-nav-icon">🔔</span>通知
+  </button>
+  <button class="bottom-nav-item" data-acp-type="bottom-nav-item" data-acp-id="bnav-profile" onclick="activateBottomNav(this)">
+    <span class="bottom-nav-icon">👤</span>我的
+  </button>
+</nav>
+
+<!-- Drawer (E14, S08) -->
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()"
+     data-acp-type="drawer-overlay" data-acp-id="drawer-overlay">
+  <div class="drawer" onclick="event.stopPropagation()" data-acp-type="drawer" data-acp-id="main-drawer">
+    <div class="drawer-header">📱 移动导航</div>
+    <div class="drawer-item" data-acp-type="drawer-item" data-acp-id="drawer-home" onclick="closeDrawer();setPage('首页')">🏠 首页</div>
+    <div class="drawer-item" data-acp-type="drawer-item" data-acp-id="drawer-products" onclick="closeDrawer();setPage('产品')">📦 产品</div>
+    <div class="drawer-item" data-acp-type="drawer-item" data-acp-id="drawer-docs" onclick="closeDrawer();setPage('文档')">📄 文档</div>
+    <div class="drawer-item" data-acp-type="drawer-item" data-acp-id="drawer-about" onclick="closeDrawer();setPage('关于')">ℹ️ 关于</div>
+    <div class="drawer-item" data-acp-type="drawer-item" data-acp-id="drawer-profile" onclick="closeDrawer()">👤 个人资料</div>
+    <div class="drawer-item" data-acp-type="drawer-item" data-acp-id="drawer-settings" onclick="closeDrawer()">⚙️ 设置</div>
+    <div class="drawer-item" data-acp-type="drawer-item" data-acp-id="drawer-logout" style="color:var(--danger);" onclick="closeDrawer()">🚪 退出登录</div>
+  </div>
+</div>
+
+<div class="toast-container"></div>
+<script src="../static/testenv.js"></script>
+<script src="../auto_label.js"></script>
+<script>
+  function openDrawer() {
+    document.getElementById('drawer-overlay').classList.add('open');
+  }
+  function closeDrawer() {
+    document.getElementById('drawer-overlay').classList.remove('open');
+  }
+
+  function toggleTree(parentEl) {
+    const children = parentEl.nextElementSibling;
+    const isOpen = children.classList.contains('open');
+    children.classList.toggle('open', !isOpen);
+    parentEl.classList.toggle('expanded', !isOpen);
+  }
+
+  function selectLeaf(leafEl, page) {
+    document.querySelectorAll('.tree-leaf').forEach(l => l.classList.remove('active'));
+    leafEl.classList.add('active');
+    setPage(page);
+    updateBreadcrumb(page);
+  }
+
+  function setPage(name) {
+    document.getElementById('page-title').textContent = name;
+    document.getElementById('page-desc').textContent = `当前页面：${name}。这里会展示 ${name} 相关内容。`;
+  }
+
+  function updateBreadcrumb(page) {
+    const bc = document.querySelector('.breadcrumb');
+    bc.innerHTML = `
+      <span class="breadcrumb-item" data-acp-type="breadcrumb-item" onclick="setPage('首页')">首页</span>
+      <span class="breadcrumb-sep">/</span>
+      <span class="breadcrumb-item" data-acp-type="breadcrumb-item">${page}</span>
+    `;
+  }
+
+  function activateBottomNav(btn) {
+    document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  const searchItems = ['前端开发', '后端开发', 'API 文档', '产品设计', '用户研究', '数据分析', '移动端', 'DevOps', '云服务', '安全'];
+  function showSearchResults(val) {
+    const el = document.getElementById('search-results');
+    if (!val) { el.style.display = 'none'; return; }
+    const matches = searchItems.filter(s => s.includes(val));
+    if (!matches.length) { el.style.display = 'none'; return; }
+    el.style.display = 'block';
+    el.innerHTML = matches.map(m =>
+      `<div class="search-result-item" data-acp-type="search-result" onclick="setPage('${m}');document.querySelector('[data-acp-id=nav-search-input]').value='${m}';document.getElementById('search-results').style.display='none'">${m}</div>`
+    ).join('');
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.nav-search')) document.getElementById('search-results').style.display = 'none';
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T7 媒体+地图+设置 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    .main { max-width: 960px; margin: 0 auto; padding: 20px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* Media Player (E24) */
+    .media-player { background: #111827; border-radius: 16px; padding: 20px; color: white; }
+    .track-art { width: 100%; height: 160px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 72px; margin-bottom: 16px; }
+    .track-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .track-artist { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 16px; }
+    .player-progress { position: relative; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin: 12px 0; cursor: pointer; }
+    .player-progress-fill { height: 100%; background: #a78bfa; border-radius: 2px; transition: width 0.1s; }
+    .player-time { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); }
+    .player-controls { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0; }
+    .ctrl-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 8px; border-radius: 50%; transition: background 0.15s; }
+    .ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+    .ctrl-btn.play { width: 48px; height: 48px; background: #7c3aed; font-size: 20px; }
+    .ctrl-btn.play:hover { background: #6d28d9; }
+    .volume-row { display: flex; align-items: center; gap: 8px; }
+    .volume-slider { flex: 1; accent-color: #a78bfa; }
+
+    /* Map (E26, A11 pinch zoom, A12 swipe) */
+    .map-container {
+      position: relative; height: 300px; background: #e8f4f0;
+      border-radius: 12px; overflow: hidden; border: 1px solid var(--border); cursor: grab;
+    }
+    .map-container:active { cursor: grabbing; }
+    .map-grid {
+      position: absolute; width: 600px; height: 600px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect width='60' height='60' fill='%23e8f4f0'/%3E%3Crect x='0' y='0' width='60' height='1' fill='%23c8e6c9'/%3E%3Crect x='0' y='0' width='1' height='60' fill='%23c8e6c9'/%3E%3C/svg%3E");
+    }
+    .map-roads { position: absolute; }
+    .map-marker { position: absolute; font-size: 24px; cursor: pointer; transform: translate(-50%, -100%); user-select: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+    .map-controls { position: absolute; right: 12px; top: 12px; display: flex; flex-direction: column; gap: 4px; z-index: 10; }
+    .map-ctrl-btn { width: 32px; height: 32px; background: white; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
+    .map-ctrl-btn:hover { background: var(--bg); }
+    .map-scale { position: absolute; bottom: 12px; left: 12px; font-size: 11px; background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 4px; }
+
+    /* Settings Panel */
+    .settings-section { margin-bottom: 20px; }
+    .settings-section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .setting-row:last-child { border-bottom: none; }
+    .setting-label { font-size: 14px; font-weight: 500; }
+    .setting-desc { font-size: 12px; color: var(--text-muted); }
+
+    /* Color picker (E08) */
+    .color-picker-wrapper { display: flex; align-items: center; gap: 8px; }
+    .color-swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; }
+
+    /* Responsive demo */
+    .responsive-demo { border: 2px solid var(--primary); border-radius: 8px; padding: 12px; font-size: 13px; }
+    .breakpoint-indicator { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>T7 媒体 + 地图 + 设置</h1>
+    <span class="coverage">E05, E08, E09, E24, E26 / A01, A09, A11, A12</span>
+  </div>
+
+  <div class="main">
+    <div class="two-col">
+
+      <!-- Media Player (E24) -->
+      <div>
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">音乐播放器 (E24)</h3>
+        <div class="media-player" data-acp-type="media-player" data-acp-id="music-player">
+          <div class="track-art" id="track-art" style="background:linear-gradient(135deg,#4f46e5,#7c3aed)">🎵</div>
+          <div class="track-title" id="track-title">Neon Dreams</div>
+          <div class="track-artist" id="track-artist">Synthwave Artist · 专辑名</div>
+
+          <div class="player-progress" id="player-progress"
+               data-acp-type="progress-bar" data-acp-id="player-progress"
+               onclick="seekTo(event)">
+            <div class="player-progress-fill" id="progress-fill" style="width:35%"></div>
+          </div>
+          <div class="player-time">
+            <span id="time-current">1:24</span>
+            <span id="time-total">4:02</span>
+          </div>
+
+          <div class="player-controls">
+            <button class="ctrl-btn" data-acp-type="button" data-acp-id="player-shuffle" title="随机">🔀</button>
+            <button class="ctrl-btn" data-acp-type="button" data-acp-id="player-prev" onclick="prevTrack()">⏮</button>
+            <button class="ctrl-btn play" id="play-btn" data-acp-type="button" data-acp-id="player-play" onclick="togglePlay()">▶</button>
+            <button class="ctrl-btn" data-acp-type="button" data-acp-id="player-next" onclick="nextTrack()">⏭</button>
+            <button class="ctrl-btn" data-acp-type="button" data-acp-id="player-repeat" title="循环">🔁</button>
+          </div>
+
+          <!-- Volume slider (E09) -->
+          <div class="volume-row">
+            <span style="font-size:16px;">🔈</span>
+            <input type="range" class="volume-slider" min="0" max="100" value="70"
+                   data-acp-type="slider" data-acp-id="volume-control"
+                   oninput="setVolume(this.value)">
+            <span style="font-size:16px;">🔊</span>
+            <span id="vol-display" style="font-size:12px;color:rgba(255,255,255,0.6);margin-left:4px;">70%</span>
+          </div>
+        </div>
+
+        <!-- Track list -->
+        <div class="card mt-4">
+          <div style="font-weight:600;margin-bottom:8px;">播放列表</div>
+          <div id="track-list" data-acp-type="playlist" data-acp-id="track-list"></div>
+        </div>
+      </div>
+
+      <!-- Map (E26) -->
+      <div>
+        <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">地图交互 (E26)</h3>
+        <div class="map-container" id="map-container" data-acp-type="map" data-acp-id="main-map">
+          <div id="map-grid" class="map-grid">
+            <!-- SVG Roads -->
+            <svg width="600" height="600" style="position:absolute;top:0;left:0;">
+              <line x1="0" y1="200" x2="600" y2="200" stroke="#a5d6a7" stroke-width="8"/>
+              <line x1="0" y1="350" x2="600" y2="350" stroke="#a5d6a7" stroke-width="12"/>
+              <line x1="150" y1="0" x2="150" y2="600" stroke="#a5d6a7" stroke-width="8"/>
+              <line x1="350" y1="0" x2="350" y2="600" stroke="#a5d6a7" stroke-width="12"/>
+              <rect x="0" y="0" width="600" height="100" fill="#d1fae5" opacity="0.4"/>
+              <rect x="400" y="200" width="150" height="130" fill="#e2e8f0" opacity="0.7" rx="4"/>
+              <rect x="50" y="220" width="80" height="110" fill="#e2e8f0" opacity="0.7" rx="4"/>
+              <circle cx="300" cy="280" r="40" fill="#bbf7d0" opacity="0.8"/>
+              <text x="285" y="285" font-size="12" fill="#065f46">公园</text>
+            </svg>
+          </div>
+          <!-- Markers -->
+          <div class="map-marker" style="left:150px;top:200px;" data-acp-type="map-marker" data-acp-id="marker-home" onclick="Toast.info('📍 我的位置')">📍</div>
+          <div class="map-marker" style="left:350px;top:200px;" data-acp-type="map-marker" data-acp-id="marker-office" onclick="Toast.info('🏢 公司')">🏢</div>
+          <div class="map-marker" style="left:200px;top:350px;" data-acp-type="map-marker" data-acp-id="marker-food" onclick="Toast.info('🍜 餐厅')">🍜</div>
+          <div class="map-marker" style="left:420px;top:260px;" data-acp-type="map-marker" data-acp-id="marker-shop" onclick="Toast.info('🛒 超市')">🛒</div>
+
+          <div class="map-controls">
+            <div class="map-ctrl-btn" data-acp-type="button" data-acp-id="map-zoom-in" onclick="zoomMap(1.2)">+</div>
+            <div class="map-ctrl-btn" data-acp-type="button" data-acp-id="map-zoom-out" onclick="zoomMap(0.8)">−</div>
+            <div class="map-ctrl-btn" data-acp-type="button" data-acp-id="map-reset" onclick="resetMap()" title="重置">⌂</div>
+          </div>
+          <div class="map-scale" id="map-scale">比例尺: 1km</div>
+        </div>
+        <p class="text-muted text-sm mt-2">拖拽平移地图 · +/- 缩放 · 点击标记查看信息</p>
+      </div>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="card mt-4" style="grid-column:1/-1;">
+      <div class="card-header">设置面板 (E05, E08, E09)</div>
+      <div class="two-col">
+        <div>
+          <div class="settings-section">
+            <div class="settings-section-title">通用</div>
+            <!-- E05 switches -->
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">深色模式</div><div class="setting-desc">切换深色/浅色主题</div></div>
+              <label class="switch" data-acp-type="switch" data-acp-id="dark-mode">
+                <input type="checkbox" onchange="Toast.info('主题已切换')">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">动画效果</div><div class="setting-desc">页面过渡动画</div></div>
+              <label class="switch" data-acp-type="switch" data-acp-id="animations">
+                <input type="checkbox" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">自动更新</div><div class="setting-desc">后台自动检查更新</div></div>
+              <label class="switch" data-acp-type="switch" data-acp-id="auto-update">
+                <input type="checkbox" checked>
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">硬件加速</div><div class="setting-desc">使用 GPU 渲染</div></div>
+              <label class="switch" data-acp-type="switch" data-acp-id="hw-accel">
+                <input type="checkbox">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="settings-section">
+            <div class="settings-section-title">显示与颜色</div>
+            <!-- E09 slider -->
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">亮度: <span id="brightness-val">80</span>%</div></div>
+              <div style="width:140px;">
+                <input type="range" class="slider w-full" min="0" max="100" value="80"
+                       data-acp-type="slider" data-acp-id="brightness-slider"
+                       oninput="document.getElementById('brightness-val').textContent=this.value">
+              </div>
+            </div>
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">字体大小: <span id="font-val">14</span>px</div></div>
+              <div style="width:140px;">
+                <input type="range" class="slider w-full" min="10" max="20" value="14"
+                       data-acp-type="slider" data-acp-id="font-size-slider"
+                       oninput="document.getElementById('font-val').textContent=this.value">
+              </div>
+            </div>
+            <!-- E08 Color Picker -->
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">主题颜色</div><div class="setting-desc">自定义主题色</div></div>
+              <div class="color-picker-wrapper">
+                <div class="color-swatch" style="background:#4f46e5;" data-acp-type="color-swatch" data-acp-id="color-indigo" onclick="setThemeColor('#4f46e5',this)"></div>
+                <div class="color-swatch" style="background:#059669;" data-acp-type="color-swatch" data-acp-id="color-green" onclick="setThemeColor('#059669',this)"></div>
+                <div class="color-swatch" style="background:#dc2626;" data-acp-type="color-swatch" data-acp-id="color-red" onclick="setThemeColor('#dc2626',this)"></div>
+                <div class="color-swatch" style="background:#d97706;" data-acp-type="color-swatch" data-acp-id="color-amber" onclick="setThemeColor('#d97706',this)"></div>
+                <input type="color" value="#4f46e5" title="自定义颜色"
+                       data-acp-type="color-picker" data-acp-id="custom-color"
+                       style="width:28px;height:28px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;"
+                       oninput="setThemeColor(this.value)">
+              </div>
+            </div>
+
+            <!-- Responsive layout demo (L16) -->
+            <div class="setting-row" data-acp-type="setting-row">
+              <div><div class="setting-label">响应式布局</div></div>
+              <div class="responsive-demo" data-acp-type="responsive-indicator" data-acp-id="breakpoint">
+                <span id="bp-label" class="breakpoint-indicator"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container"></div>
+  <script src="../static/testenv.js"></script>
+  <script src="../auto_label.js"></script>
+  <script>
+    // ── Music Player ─────────────────────────────────────────────────────────
+    const tracks = [
+      { title:'Neon Dreams', artist:'Synthwave Artist', emoji:'🎵', color:'linear-gradient(135deg,#4f46e5,#7c3aed)', dur:'4:02' },
+      { title:'Pacific Sunset', artist:'Chillwave Band', emoji:'🌊', color:'linear-gradient(135deg,#0891b2,#0e7490)', dur:'3:45' },
+      { title:'Forest Walk', artist:'Ambient Crew', emoji:'🌲', color:'linear-gradient(135deg,#059669,#047857)', dur:'5:12' },
+      { title:'City Lights', artist:'Lo-fi Producer', emoji:'🌃', color:'linear-gradient(135deg,#dc2626,#b91c1c)', dur:'3:28' },
+    ];
+    let currentTrack = 0, playing = false, progressVal = 35;
+    let playerInterval;
+
+    function renderTrackList() {
+      const list = document.getElementById('track-list');
+      list.innerHTML = tracks.map((t, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;cursor:pointer;${i===currentTrack?'background:var(--bg);':''}"
+             onclick="loadTrack(${i})"
+             data-acp-type="playlist-item" data-acp-id="track-${i}">
+          <span style="font-size:20px;">${t.emoji}</span>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:${i===currentTrack?'700':'400'};">${t.title}</div>
+          <div style="font-size:11px;color:var(--text-muted);">${t.artist}</div></div>
+          <span style="font-size:12px;color:var(--text-muted);">${t.dur}</span>
+        </div>`).join('');
+    }
+    renderTrackList();
+
+    function loadTrack(i) {
+      currentTrack = i;
+      const t = tracks[i];
+      document.getElementById('track-art').textContent = t.emoji;
+      document.getElementById('track-art').style.background = t.color;
+      document.getElementById('track-title').textContent = t.title;
+      document.getElementById('track-artist').textContent = t.artist + ' · 专辑名';
+      document.getElementById('time-total').textContent = t.dur;
+      progressVal = 0;
+      document.getElementById('progress-fill').style.width = '0%';
+      renderTrackList();
+      if (playing) startProgress();
+    }
+    function togglePlay() {
+      playing = !playing;
+      document.getElementById('play-btn').textContent = playing ? '⏸' : '▶';
+      if (playing) startProgress(); else clearInterval(playerInterval);
+    }
+    function startProgress() {
+      clearInterval(playerInterval);
+      playerInterval = setInterval(() => {
+        progressVal = Math.min(100, progressVal + 0.3);
+        document.getElementById('progress-fill').style.width = progressVal + '%';
+        const totalSec = [4*60+2, 3*60+45, 5*60+12, 3*60+28][currentTrack];
+        const cur = Math.round(totalSec * progressVal / 100);
+        document.getElementById('time-current').textContent = `${Math.floor(cur/60)}:${String(cur%60).padStart(2,'0')}`;
+        if (progressVal >= 100) nextTrack();
+      }, 100);
+    }
+    function nextTrack() { loadTrack((currentTrack+1) % tracks.length); }
+    function prevTrack() { loadTrack((currentTrack-1+tracks.length) % tracks.length); }
+    function seekTo(e) {
+      const bar = document.getElementById('player-progress');
+      const rect = bar.getBoundingClientRect();
+      progressVal = ((e.clientX - rect.left) / rect.width) * 100;
+      document.getElementById('progress-fill').style.width = progressVal + '%';
+    }
+    function setVolume(v) { document.getElementById('vol-display').textContent = v + '%'; }
+
+    // ── Map ──────────────────────────────────────────────────────────────────
+    let mapScale = 1, mapX = 0, mapY = 0;
+    let isDragging = false, dragStart = {};
+    const mapGrid = document.getElementById('map-grid');
+
+    function updateMapTransform() {
+      mapGrid.style.transform = `scale(${mapScale}) translate(${mapX}px, ${mapY}px)`;
+      mapGrid.style.transformOrigin = 'center center';
+      document.getElementById('map-scale').textContent = `比例尺: ${(1/mapScale).toFixed(1)}km`;
+    }
+    function zoomMap(factor) {
+      mapScale = Math.max(0.5, Math.min(3, mapScale * factor));
+      updateMapTransform();
+    }
+    function resetMap() { mapScale = 1; mapX = 0; mapY = 0; updateMapTransform(); }
+
+    const mc = document.getElementById('map-container');
+    mc.addEventListener('mousedown', e => { isDragging = true; dragStart = { x: e.clientX - mapX, y: e.clientY - mapY }; });
+    mc.addEventListener('mousemove', e => { if (isDragging) { mapX = e.clientX - dragStart.x; mapY = e.clientY - dragStart.y; updateMapTransform(); } });
+    mc.addEventListener('mouseup', () => isDragging = false);
+    mc.addEventListener('mouseleave', () => isDragging = false);
+    // Wheel zoom (simulating pinch, A11)
+    mc.addEventListener('wheel', e => { e.preventDefault(); zoomMap(e.deltaY < 0 ? 1.1 : 0.9); }, { passive: false });
+    // Touch pinch (A11)
+    let lastPinchDist = 0;
+    mc.addEventListener('touchstart', e => { if (e.touches.length === 2) lastPinchDist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY); }, { passive: true });
+    mc.addEventListener('touchmove', e => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const dist = Math.hypot(e.touches[0].clientX-e.touches[1].clientX, e.touches[0].clientY-e.touches[1].clientY);
+        zoomMap(dist / lastPinchDist);
+        lastPinchDist = dist;
+      }
+    }, { passive: false });
+
+    // ── Settings ─────────────────────────────────────────────────────────────
+    function setThemeColor(color, swatch) {
+      document.documentElement.style.setProperty('--primary', color);
+      Toast.success(`主题色已更改`);
+    }
+
+    // Responsive breakpoint display (L16)
+    function updateBreakpoint() {
+      const w = window.innerWidth;
+      const el = document.getElementById('bp-label');
+      if (w < 480) { el.textContent = 'XS (<480px)'; el.style.cssText = 'background:#fef3c7;color:#92400e'; }
+      else if (w < 768) { el.textContent = 'SM (<768px)'; el.style.cssText = 'background:#dcfce7;color:#166534'; }
+      else if (w < 1024) { el.textContent = 'MD (<1024px)'; el.style.cssText = 'background:#dbeafe;color:#1e40af'; }
+      else { el.textContent = 'LG (≥1024px)'; el.style.cssText = 'background:#ede9fe;color:#5b21b6'; }
+    }
+    updateBreakpoint();
+    window.addEventListener('resize', updateBreakpoint);
+  </script>
+</body>
+</html>

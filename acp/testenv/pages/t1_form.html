@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T1 综合表单 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    .main { max-width: 760px; margin: 0 auto; padding: 24px; }
+    .section-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; padding-bottom: 8px; border-bottom: 2px solid var(--border); color: var(--primary); }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>T1 综合表单</h1>
+    <span class="coverage">E01-E07, E09, E34 / A01, A06, A08, A18, A19, A22</span>
+  </div>
+
+  <!-- Notification Banner (E33) -->
+  <div id="top-banner" class="notification-banner info"
+       data-acp-type="notification-banner" data-acp-id="top-banner"
+       style="margin: 16px 24px 0; max-width: 760px; margin-left: auto; margin-right: auto;">
+    <span>提示：此页面覆盖所有基础表单交互。填写并提交表单查看验证效果。</span>
+    <button class="btn btn-ghost btn-sm" onclick="dismissBanner(this.parentElement)"
+            data-acp-type="button" data-acp-id="close-banner">✕</button>
+  </div>
+
+  <div class="main">
+
+    <!-- ── 1. 登录表单 ──────────────────────────────────────────── -->
+    <div class="card mb-4">
+      <div class="section-title">登录表单 (P01)</div>
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="login-email">邮箱地址</label>
+          <!-- E02 input, A06 type, A19 tab -->
+          <input id="login-email" type="email" class="form-input" placeholder="user@example.com"
+                 data-acp-type="input" data-acp-id="login-email"
+                 data-required data-type="email" tabindex="1">
+          <span class="form-error" id="err-login-email"></span>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="login-password">密码</label>
+          <input id="login-password" type="password" class="form-input" placeholder="请输入密码"
+                 data-acp-type="input" data-acp-id="login-password"
+                 data-required tabindex="2">
+          <span class="form-error" id="err-login-password"></span>
+        </div>
+        <div class="flex items-center justify-between mb-4">
+          <label class="checkbox-item">
+            <!-- E03 checkbox, A01 click -->
+            <input type="checkbox" data-acp-type="checkbox" data-acp-id="remember-me" tabindex="3">
+            <span>记住我</span>
+          </label>
+          <a href="#" style="color: var(--primary); font-size: 13px;"
+             data-acp-type="link" data-acp-id="forgot-password">忘记密码?</a>
+        </div>
+        <!-- E01 button, A01 click, A18 enter -->
+        <button type="submit" class="btn btn-primary w-full" tabindex="4"
+                data-acp-type="button" data-acp-id="login-submit">登录</button>
+      </form>
+    </div>
+
+    <!-- ── 2. 注册表单 ──────────────────────────────────────────── -->
+    <div class="card mb-4">
+      <div class="section-title">注册表单 (P02)</div>
+      <form id="register-form" novalidate>
+        <div class="two-col">
+          <div class="form-group">
+            <label class="form-label" for="reg-name">姓名</label>
+            <input id="reg-name" type="text" class="form-input" placeholder="张三"
+                   data-acp-type="input" data-acp-id="reg-name" data-required tabindex="10">
+            <span class="form-error" id="err-reg-name"></span>
+          </div>
+          <div class="form-group">
+            <!-- E07 date picker -->
+            <label class="form-label" for="reg-birthday">生日</label>
+            <input id="reg-birthday" type="date" class="form-input"
+                   data-acp-type="date-picker" data-acp-id="reg-birthday" tabindex="11">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="reg-email">邮箱</label>
+          <input id="reg-email" type="email" class="form-input" placeholder="user@example.com"
+                 data-acp-type="input" data-acp-id="reg-email" data-required data-type="email" tabindex="12">
+          <span class="form-error" id="err-reg-email"></span>
+        </div>
+        <div class="two-col">
+          <div class="form-group">
+            <label class="form-label" for="reg-password">密码</label>
+            <input id="reg-password" type="password" class="form-input" placeholder="6位以上"
+                   data-acp-type="input" data-acp-id="reg-password" data-required tabindex="13">
+            <span class="form-error" id="err-reg-password"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reg-confirm">确认密码</label>
+            <input id="reg-confirm" type="password" class="form-input" placeholder="再次输入"
+                   data-acp-type="input" data-acp-id="reg-confirm" data-required tabindex="14">
+            <span class="form-error" id="err-reg-confirm"></span>
+          </div>
+        </div>
+
+        <!-- E04 radio -->
+        <div class="form-group">
+          <label class="form-label">性别</label>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="gender" value="male"
+                     data-acp-type="radio" data-acp-id="gender-male" tabindex="15"> 男
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="gender" value="female"
+                     data-acp-type="radio" data-acp-id="gender-female" tabindex="16"> 女
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="gender" value="other"
+                     data-acp-type="radio" data-acp-id="gender-other" tabindex="17"> 保密
+            </label>
+          </div>
+        </div>
+
+        <!-- E03 checkbox group -->
+        <div class="form-group">
+          <label class="form-label">兴趣爱好（多选）</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item">
+              <input type="checkbox" value="tech" data-acp-type="checkbox" data-acp-id="interest-tech"> 科技
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" value="music" data-acp-type="checkbox" data-acp-id="interest-music"> 音乐
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" value="travel" data-acp-type="checkbox" data-acp-id="interest-travel"> 旅行
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" value="sport" data-acp-type="checkbox" data-acp-id="interest-sport"> 运动
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" value="food" data-acp-type="checkbox" data-acp-id="interest-food"> 美食
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 justify-end">
+          <button type="button" class="btn btn-secondary" id="reg-reset"
+                  data-acp-type="button" data-acp-id="reg-reset">重置</button>
+          <button type="submit" class="btn btn-primary"
+                  data-acp-type="button" data-acp-id="reg-submit">注册账号</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ── 3. 设置表单 ──────────────────────────────────────────── -->
+    <div class="card mb-4">
+      <div class="section-title">设置面板 (P23)</div>
+
+      <div class="flex items-center justify-between mb-4" style="padding: 12px; background: var(--bg); border-radius: 8px;">
+        <div>
+          <div style="font-weight: 500;">邮件通知</div>
+          <div class="text-muted text-sm">接收系统邮件通知</div>
+        </div>
+        <!-- E05 switch -->
+        <label class="switch" data-acp-type="switch" data-acp-id="notify-email">
+          <input type="checkbox" checked>
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="flex items-center justify-between mb-4" style="padding: 12px; background: var(--bg); border-radius: 8px;">
+        <div>
+          <div style="font-weight: 500;">推送通知</div>
+          <div class="text-muted text-sm">接收浏览器推送</div>
+        </div>
+        <label class="switch" data-acp-type="switch" data-acp-id="notify-push">
+          <input type="checkbox">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <!-- E09 slider -->
+      <div class="form-group">
+        <label class="form-label">音量大小: <span id="volume-val">50</span>%</label>
+        <input type="range" class="slider w-full" min="0" max="100" value="50"
+               data-acp-type="slider" data-acp-id="volume-slider"
+               oninput="document.getElementById('volume-val').textContent=this.value">
+      </div>
+
+      <!-- E06 dropdown, A22 select option -->
+      <div class="form-group">
+        <label class="form-label" for="theme-select">主题</label>
+        <select id="theme-select" class="form-select"
+                data-acp-type="select" data-acp-id="theme-select">
+          <option value="">-- 选择主题 --</option>
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+          <option value="auto">跟随系统</option>
+        </select>
+      </div>
+
+      <!-- E06 dropdown -->
+      <div class="form-group">
+        <label class="form-label" for="lang-select">语言</label>
+        <select id="lang-select" class="form-select"
+                data-acp-type="select" data-acp-id="lang-select">
+          <option value="zh">简体中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+        </select>
+      </div>
+
+      <button class="btn btn-primary" onclick="Toast.success('设置已保存')"
+              data-acp-type="button" data-acp-id="save-settings">保存设置</button>
+    </div>
+
+    <!-- ── 4. 搜索 + 自动补全 ─────────────────────────────────── -->
+    <div class="card mb-4">
+      <div class="section-title">搜索 + 自动补全 (E34, A08)</div>
+      <div class="form-group" style="position: relative;">
+        <label class="form-label" for="search-input">搜索城市</label>
+        <div style="position: relative;">
+          <!-- E34 autocomplete, A08 autocomplete select -->
+          <input id="search-input" type="text" class="form-input" placeholder="输入城市名..."
+                 data-acp-type="input" data-acp-id="search-city"
+                 oninput="filterSuggestions(this.value)">
+          <div id="suggestions-dropdown" style="
+            position: absolute; top: 100%; left: 0; right: 0; background: white;
+            border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px;
+            box-shadow: var(--shadow); z-index: 100; display: none;
+          " data-acp-type="autocomplete" data-acp-id="city-autocomplete"></div>
+        </div>
+      </div>
+      <p class="text-sm text-muted">已选城市: <strong id="selected-city">（未选择）</strong></p>
+    </div>
+
+  </div><!-- .main -->
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-root"></div>
+
+  <script src="../static/testenv.js"></script>
+  <script src="../auto_label.js"></script>
+  <script>
+    const CITIES = ['北京','上海','广州','深圳','成都','杭州','武汉','南京','西安','重庆',
+      '天津','苏州','长沙','郑州','东莞','青岛','沈阳','宁波','昆明','大连'];
+
+    function filterSuggestions(val) {
+      const dd = document.getElementById('suggestions-dropdown');
+      if (!val.trim()) { dd.style.display = 'none'; return; }
+      const matches = CITIES.filter(c => c.includes(val) || c.toLowerCase().includes(val.toLowerCase()));
+      if (!matches.length) { dd.style.display = 'none'; return; }
+      dd.innerHTML = matches.slice(0,6).map(c =>
+        `<div class="autocomplete-item" data-acp-type="autocomplete-item" data-acp-id="city-${c}"
+          style="padding:8px 12px;cursor:pointer;font-size:14px;"
+          onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''"
+          onclick="selectCity('${c}')">${c}</div>`
+      ).join('');
+      dd.style.display = 'block';
+    }
+    function selectCity(city) {
+      document.getElementById('search-input').value = city;
+      document.getElementById('suggestions-dropdown').style.display = 'none';
+      document.getElementById('selected-city').textContent = city;
+      Toast.success(`已选择城市：${city}`);
+    }
+    document.addEventListener('click', e => {
+      if (!e.target.closest('[data-acp-id="search-city"]') && !e.target.closest('[data-acp-id="city-autocomplete"]')) {
+        document.getElementById('suggestions-dropdown').style.display = 'none';
+      }
+    });
+
+    // Login form submit
+    document.getElementById('login-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const email = document.getElementById('login-email');
+      const pw = document.getElementById('login-password');
+      let ok = true;
+      document.getElementById('err-login-email').textContent = '';
+      document.getElementById('err-login-password').textContent = '';
+      email.classList.remove('error'); pw.classList.remove('error');
+
+      if (!email.value) { email.classList.add('error'); document.getElementById('err-login-email').textContent = '邮箱为必填'; ok = false; }
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) { email.classList.add('error'); document.getElementById('err-login-email').textContent = '邮箱格式不正确'; ok = false; }
+      if (!pw.value) { pw.classList.add('error'); document.getElementById('err-login-password').textContent = '密码为必填'; ok = false; }
+      else if (pw.value.length < 6) { pw.classList.add('error'); document.getElementById('err-login-password').textContent = '密码至少6位'; ok = false; }
+
+      if (ok) {
+        Toast.success('登录成功！欢迎回来');
+        email.value = ''; pw.value = '';
+      } else {
+        Toast.error('请检查表单错误');
+      }
+    });
+
+    // Register form submit
+    document.getElementById('register-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = document.getElementById('reg-name');
+      const email = document.getElementById('reg-email');
+      const pw = document.getElementById('reg-password');
+      const confirm = document.getElementById('reg-confirm');
+      let ok = true;
+      ['reg-name','reg-email','reg-password','reg-confirm'].forEach(id => {
+        document.getElementById('err-' + id).textContent = '';
+        document.getElementById(id).classList.remove('error');
+      });
+
+      if (!name.value) { name.classList.add('error'); document.getElementById('err-reg-name').textContent = '姓名为必填'; ok = false; }
+      if (!email.value) { email.classList.add('error'); document.getElementById('err-reg-email').textContent = '邮箱为必填'; ok = false; }
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) { email.classList.add('error'); document.getElementById('err-reg-email').textContent = '邮箱格式不正确'; ok = false; }
+      if (!pw.value || pw.value.length < 6) { pw.classList.add('error'); document.getElementById('err-reg-password').textContent = '密码至少6位'; ok = false; }
+      if (!confirm.value || confirm.value !== pw.value) { confirm.classList.add('error'); document.getElementById('err-reg-confirm').textContent = '两次密码不一致'; ok = false; }
+
+      if (ok) {
+        Toast.success('注册成功！请登录');
+      } else {
+        Toast.error('请修正表单中的错误');
+      }
+    });
+
+    document.getElementById('reg-reset').addEventListener('click', () => {
+      document.getElementById('register-form').reset();
+      ['reg-name','reg-email','reg-password','reg-confirm'].forEach(id => {
+        document.getElementById('err-' + id).textContent = '';
+        document.getElementById(id).classList.remove('error');
+      });
+      Toast.info('表单已重置');
+    });
+
+    // Enter key submit on login
+    document.getElementById('login-password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('login-form').dispatchEvent(new Event('submit'));
+    });
+  </script>
+</body>
+</html>

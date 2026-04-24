@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ACP 测试环境</title>
+  <link rel="stylesheet" href="static/style.css">
+  <style>
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    .hero { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 48px 24px; text-align: center; }
+    .hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+    .hero p { font-size: 16px; opacity: 0.85; max-width: 560px; margin: 0 auto; }
+    .pages-grid { max-width: 960px; margin: 0 auto; padding: 32px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+    .page-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 20px; transition: transform 0.15s, box-shadow 0.15s; text-decoration: none; color: inherit; display: block; }
+    .page-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--primary); }
+    .page-card-num { font-size: 28px; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+    .page-card-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .page-card-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.6; }
+    .coverage-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+    .coverage-tag { font-size: 10px; background: #ede9fe; color: #5b21b6; padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+    .coverage-tag.action { background: #dcfce7; color: #166534; }
+    .footer { margin-top: auto; background: #1f2937; color: #9ca3af; padding: 16px 24px; text-align: center; font-size: 13px; }
+    .stats-bar { background: white; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; justify-content: center; gap: 32px; flex-wrap: wrap; }
+    .stat { text-align: center; }
+    .stat-num { font-size: 22px; font-weight: 700; color: var(--primary); }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>ACP 私有测试环境</h1>
+    <p>基于 UI 交互分类学设计的 8 个综合测试页面，覆盖 33/35 元素类型、24/25 操作类型</p>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-num">8</div><div class="stat-label">测试页面</div></div>
+    <div class="stat"><div class="stat-num">33/35</div><div class="stat-label">UI 元素类型</div></div>
+    <div class="stat"><div class="stat-num">24/25</div><div class="stat-label">操作类型</div></div>
+    <div class="stat"><div class="stat-num">20/25</div><div class="stat-label">页面模式</div></div>
+    <div class="stat"><div class="stat-num">22/24</div><div class="stat-label">状态变化</div></div>
+  </div>
+
+  <div class="pages-grid">
+    <a href="pages/t1_form.html" class="page-card" data-acp-type="card" data-acp-id="nav-t1">
+      <div class="page-card-num">T1</div>
+      <div class="page-card-title">综合表单页</div>
+      <div class="page-card-desc">登录/注册/设置表单，含自动补全、表单验证、Toast 反馈</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E01-E07</span>
+        <span class="coverage-tag">E09 E34</span>
+        <span class="coverage-tag action">A01 A06</span>
+        <span class="coverage-tag action">A08 A18 A19</span>
+      </div>
+    </a>
+
+    <a href="pages/t2_dashboard.html" class="page-card" data-acp-type="card" data-acp-id="nav-t2">
+      <div class="page-card-num">T2</div>
+      <div class="page-card-title">数据表格 / Dashboard</div>
+      <div class="page-card-desc">Tab 切换、统计卡片、可排序表格、CSS 图表、无限滚动</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E11 E17 E22 E23 E27</span>
+        <span class="coverage-tag action">A01 A05 A09</span>
+      </div>
+    </a>
+
+    <a href="pages/t3_list_modal.html" class="page-card" data-acp-type="card" data-acp-id="nav-t3">
+      <div class="page-card-num">T3</div>
+      <div class="page-card-title">列表 + 弹窗</div>
+      <div class="page-card-desc">可滚动列表、详情 Modal、长按菜单、删除确认、Tooltip</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E21 E29-E31 E33</span>
+        <span class="coverage-tag action">A01 A03 A09</span>
+      </div>
+    </a>
+
+    <a href="pages/t4_ecommerce.html" class="page-card" data-acp-type="card" data-acp-id="nav-t4">
+      <div class="page-card-num">T4</div>
+      <div class="page-card-title">电商购物流程</div>
+      <div class="page-card-desc">商品网格、图片轮播、购物车侧栏、多步结算进度条</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E01 E18 E22 E25 E32</span>
+        <span class="coverage-tag action">A01 A09 A10 A12</span>
+      </div>
+    </a>
+
+    <a href="pages/t5_navigation.html" class="page-card" data-acp-type="card" data-acp-id="nav-t5">
+      <div class="page-card-num">T5</div>
+      <div class="page-card-title">导航 + 菜单</div>
+      <div class="page-card-desc">顶部导航、下拉菜单、树形菜单、面包屑、底部导航、侧边抽屉</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E12-E16</span>
+        <span class="coverage-tag action">A01 A05</span>
+      </div>
+    </a>
+
+    <a href="pages/t6_file_drag.html" class="page-card" data-acp-type="card" data-acp-id="nav-t6">
+      <div class="page-card-num">T6</div>
+      <div class="page-card-title">文件拖拽操作</div>
+      <div class="page-card-desc">拖拽上传、列表排序、右键菜单、双击重命名、文本选择</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E35</span>
+        <span class="coverage-tag action">A02 A04 A13-A15</span>
+        <span class="coverage-tag action">A20 A23</span>
+      </div>
+    </a>
+
+    <a href="pages/t7_media_map.html" class="page-card" data-acp-type="card" data-acp-id="nav-t7">
+      <div class="page-card-num">T7</div>
+      <div class="page-card-title">媒体 + 地图 + 设置</div>
+      <div class="page-card-desc">音视频播放器、CSS 地图平移/缩放、颜色选择器、响应式布局</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E05 E08 E09 E24 E26</span>
+        <span class="coverage-tag action">A01 A09 A11 A12</span>
+      </div>
+    </a>
+
+    <a href="pages/t8_async_error.html" class="page-card" data-acp-type="card" data-acp-id="nav-t8">
+      <div class="page-card-num">T8</div>
+      <div class="page-card-title">异步状态 + 错误处理</div>
+      <div class="page-card-desc">骨架屏、加载/成功/失败状态、表单错误、空状态、权限提示</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">E30 E32 E33</span>
+        <span class="coverage-tag action">A01</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="footer">
+    ACP 私有测试环境 · 基于 UI 交互分类学 (16 个公开数据集) · 纯 HTML+CSS+JS，无框架依赖
+  </div>
+
+  <script src="auto_label.js"></script>
+</body>
+</html>

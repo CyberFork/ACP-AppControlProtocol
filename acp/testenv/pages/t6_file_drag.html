@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T6 文件拖拽 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    .main { max-width: 900px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 700px) { .main { grid-template-columns: 1fr; } }
+
+    /* Drop Zone (E35, A15) */
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 12px; padding: 40px 24px;
+      text-align: center; cursor: pointer; transition: all 0.2s; background: white;
+      position: relative;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--primary); background: #ede9fe; color: var(--primary);
+    }
+    .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .drop-icon { font-size: 48px; margin-bottom: 12px; }
+    .drop-text { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .drop-hint { font-size: 13px; color: var(--text-muted); }
+    .progress-item { margin-top: 8px; font-size: 13px; }
+
+    /* File List (A13 drag sort, A02 dblclick, A04 right-click) */
+    .file-list { background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .file-list-header { padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+    .file-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+      border-bottom: 1px solid var(--border); cursor: grab; user-select: none;
+      transition: background 0.1s;
+    }
+    .file-item:last-child { border-bottom: none; }
+    .file-item:hover { background: var(--bg); }
+    .file-item.drag-over-item { border-top: 2px solid var(--primary); }
+    .file-icon { font-size: 22px; flex-shrink: 0; }
+    .file-name { flex: 1; font-size: 14px; }
+    .file-name.editing { background: white; border: 1px solid var(--primary); border-radius: 4px; padding: 2px 6px; outline: none; }
+    .file-size { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .file-drag-handle { color: var(--text-muted); font-size: 16px; cursor: grab; }
+
+    /* Text Selection Area (A23) */
+    .text-area { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    .selectable-text {
+      font-size: 14px; line-height: 1.7; cursor: text;
+      background: white; padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+      min-height: 120px; white-space: pre-wrap;
+    }
+
+    /* Keyboard shortcuts panel (A20) */
+    .shortcuts-panel { background: #1f2937; color: white; border-radius: 12px; padding: 16px; }
+    .shortcut-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .shortcut-row:last-child { border-bottom: none; }
+    .shortcut-label { font-size: 13px; color: rgba(255,255,255,0.7); }
+    .shortcut-key { display: inline-flex; gap: 4px; }
+    .kbd {
+      background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px; padding: 2px 6px; font-size: 11px; font-family: monospace;
+      font-weight: 600;
+    }
+    .key-highlight { background: var(--primary) !important; border-color: var(--primary-hover) !important; }
+
+    /* Right-click note */
+    .right-click-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; font-style: italic; }
+
+    /* Upload progress list */
+    .upload-list { margin-top: 12px; }
+    .upload-item { margin-bottom: 8px; }
+    .upload-item-header { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>T6 文件拖拽操作</h1>
+    <span class="coverage">E35 / A02, A04, A13-A15, A20, A23</span>
+  </div>
+
+  <div class="main">
+
+    <!-- Drop Zone (E35, A15) -->
+    <div>
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">文件上传区 (E35)</h3>
+      <div class="drop-zone" id="drop-zone"
+           data-acp-type="file-upload" data-acp-id="drop-zone">
+        <input type="file" multiple onchange="handleFileSelect(this.files)"
+               data-acp-type="file-input" data-acp-id="file-input">
+        <div class="drop-icon">📁</div>
+        <div class="drop-text">拖拽文件到此处，或点击选择</div>
+        <div class="drop-hint">支持任意格式，最大 10MB</div>
+      </div>
+
+      <!-- Upload progress list (E32) -->
+      <div class="upload-list" id="upload-list" data-acp-type="upload-list" data-acp-id="upload-list"></div>
+    </div>
+
+    <!-- Drag-Sort File List (A13) -->
+    <div>
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;">文件列表（可拖拽排序，右键操作）</h3>
+      <p class="right-click-hint">右键单击文件 → 操作菜单 | 双击名称 → 重命名 | 拖拽 ⠿ 图标排序</p>
+      <div class="file-list" id="file-list" data-acp-type="file-list" data-acp-id="file-list"></div>
+    </div>
+
+    <!-- Text Selection Area (A23) -->
+    <div class="text-area">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:8px;">文本选择区 (A23)</h3>
+      <div class="selectable-text" id="selectable-text"
+           data-acp-type="text-selection-area" data-acp-id="text-area">ACP 是一个用于训练视觉-语言-动作模型的私有测试环境。
+
+该环境覆盖了 33 种 UI 元素类型和 24 种操作类型，包括点击、拖拽、键盘快捷键等常见交互方式。
+
+你可以用鼠标拖拽选中这段文字，触发文本高亮选择操作（A23）。
+
+选中后尝试 Ctrl+C 复制，Ctrl+V 粘贴到其他地方。</div>
+      <div class="flex gap-2 mt-2">
+        <button class="btn btn-secondary btn-sm" data-acp-type="button" data-acp-id="select-all-text"
+                onclick="selectAllText()">全选</button>
+        <button class="btn btn-secondary btn-sm" data-acp-type="button" data-acp-id="copy-text"
+                onclick="copySelectedText()">复制选中</button>
+        <span id="selection-info" class="text-muted text-sm" style="line-height:28px;"></span>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Panel (A20) -->
+    <div class="shortcuts-panel" data-acp-type="shortcuts-panel" data-acp-id="shortcuts-panel">
+      <h3 style="font-size:15px;font-weight:600;margin-bottom:12px;color:#a78bfa;">⌨️ 快捷键演示 (A20)</h3>
+      <div class="shortcut-row" data-acp-type="shortcut-row" data-acp-id="sc-copy">
+        <span class="shortcut-label">复制</span>
+        <span class="shortcut-key"><span class="kbd" id="key-ctrl-1">Ctrl</span><span class="kbd" id="key-c">C</span></span>
+      </div>
+      <div class="shortcut-row" data-acp-type="shortcut-row" data-acp-id="sc-paste">
+        <span class="shortcut-label">粘贴</span>
+        <span class="shortcut-key"><span class="kbd" id="key-ctrl-2">Ctrl</span><span class="kbd" id="key-v">V</span></span>
+      </div>
+      <div class="shortcut-row" data-acp-type="shortcut-row" data-acp-id="sc-cut">
+        <span class="shortcut-label">剪切</span>
+        <span class="shortcut-key"><span class="kbd" id="key-ctrl-3">Ctrl</span><span class="kbd" id="key-x">X</span></span>
+      </div>
+      <div class="shortcut-row" data-acp-type="shortcut-row" data-acp-id="sc-undo">
+        <span class="shortcut-label">撤销</span>
+        <span class="shortcut-key"><span class="kbd" id="key-ctrl-4">Ctrl</span><span class="kbd" id="key-z">Z</span></span>
+      </div>
+      <div class="shortcut-row" data-acp-type="shortcut-row" data-acp-id="sc-save">
+        <span class="shortcut-label">保存</span>
+        <span class="shortcut-key"><span class="kbd" id="key-ctrl-5">Ctrl</span><span class="kbd" id="key-s">S</span></span>
+      </div>
+      <div class="shortcut-row" data-acp-type="shortcut-row" data-acp-id="sc-export">
+        <span class="shortcut-label">ACP 导出</span>
+        <span class="shortcut-key"><span class="kbd">Ctrl</span><span class="kbd">Shift</span><span class="kbd">E</span></span>
+      </div>
+      <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:10px;">按下快捷键时对应按钮会高亮</p>
+    </div>
+
+  </div>
+
+  <div class="toast-container"></div>
+  <script src="../static/testenv.js"></script>
+  <script src="../auto_label.js"></script>
+  <script>
+    // ── File List ───────────────────────────────────────────────────────────
+    let files = [
+      { id: 1, name: 'report_2026.pdf', icon: '📄', size: '2.3 MB' },
+      { id: 2, name: 'mockups.fig', icon: '🎨', size: '8.1 MB' },
+      { id: 3, name: 'dataset.csv', icon: '📊', size: '1.2 MB' },
+      { id: 4, name: 'README.md', icon: '📝', size: '4.8 KB' },
+      { id: 5, name: 'model_weights.pt', icon: '🧠', size: '512 MB' },
+    ];
+    let dragSrcId = null;
+
+    function renderFileList() {
+      const list = document.getElementById('file-list');
+      list.innerHTML = '';
+      files.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.draggable = true;
+        item.dataset.id = f.id;
+        item.setAttribute('data-acp-type', 'file-item');
+        item.setAttribute('data-acp-id', `file-${f.id}`);
+        item.innerHTML = `
+          <span class="file-drag-handle" data-acp-type="drag-handle" data-acp-id="handle-${f.id}">⠿</span>
+          <span class="file-icon">${f.icon}</span>
+          <span class="file-name" id="fname-${f.id}" ondblclick="startRename(${f.id})"
+                data-acp-type="file-name" data-acp-id="fname-${f.id}">${f.name}</span>
+          <span class="file-size">${f.size}</span>
+        `;
+        // Drag sort (A13)
+        item.addEventListener('dragstart', () => { dragSrcId = f.id; item.style.opacity = '0.5'; });
+        item.addEventListener('dragend', () => { dragSrcId = null; item.style.opacity = ''; });
+        item.addEventListener('dragover', e => {
+          e.preventDefault();
+          document.querySelectorAll('.file-item').forEach(i => i.classList.remove('drag-over-item'));
+          item.classList.add('drag-over-item');
+        });
+        item.addEventListener('drop', e => {
+          e.preventDefault();
+          if (dragSrcId && dragSrcId !== f.id) {
+            const fromIdx = files.findIndex(x => x.id === dragSrcId);
+            const toIdx = files.findIndex(x => x.id === f.id);
+            const [moved] = files.splice(fromIdx, 1);
+            files.splice(toIdx, 0, moved);
+            renderFileList();
+            Toast.info('文件已重新排序');
+          }
+        });
+        // Right-click context menu (A04)
+        item.addEventListener('contextmenu', e => {
+          e.preventDefault();
+          showContextMenu(e.clientX, e.clientY, [
+            { label: '重命名', icon: '✏️', action: () => startRename(f.id) },
+            { label: '复制名称', icon: '📋', action: () => { navigator.clipboard?.writeText(f.name); Toast.info('已复制文件名'); } },
+            'sep',
+            { label: '下载', icon: '⬇️', action: () => Toast.info(`下载 ${f.name}`) },
+            { label: '分享', icon: '🔗', action: () => Toast.info(`分享 ${f.name}`) },
+            'sep',
+            { label: '删除', icon: '🗑', danger: true, action: () => deleteFile(f.id) }
+          ]);
+        });
+        list.appendChild(item);
+      });
+    }
+    renderFileList();
+
+    // Double-click rename (A02)
+    function startRename(id) {
+      const el = document.getElementById(`fname-${id}`);
+      const old = el.textContent;
+      el.contentEditable = 'true';
+      el.classList.add('editing');
+      el.focus();
+      const sel = window.getSelection();
+      sel.selectAllChildren(el);
+      el.addEventListener('blur', () => finishRename(id, el, old), { once: true });
+      el.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+        if (e.key === 'Escape') { el.textContent = old; el.blur(); }
+      });
+    }
+    function finishRename(id, el, old) {
+      el.contentEditable = 'false';
+      el.classList.remove('editing');
+      const newName = el.textContent.trim() || old;
+      el.textContent = newName;
+      const f = files.find(x => x.id === id);
+      if (f) { f.name = newName; Toast.success(`重命名为：${newName}`); }
+    }
+    function deleteFile(id) {
+      files = files.filter(f => f.id !== id);
+      renderFileList();
+      Toast.warning('文件已删除');
+    }
+
+    // ── Drop Zone ───────────────────────────────────────────────────────────
+    const dropZone = document.getElementById('drop-zone');
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      handleFileSelect(e.dataTransfer.files);
+    });
+
+    function handleFileSelect(fileList) {
+      const uploadList = document.getElementById('upload-list');
+      Array.from(fileList).forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'upload-item';
+        item.setAttribute('data-acp-type', 'upload-item');
+        item.setAttribute('data-acp-id', `upload-${Date.now()}`);
+        item.innerHTML = `
+          <div class="upload-item-header">
+            <span>📎 ${file.name}</span>
+            <span class="text-muted">${(file.size/1024).toFixed(1)} KB</span>
+          </div>
+          <div class="progress" data-acp-type="progress"><div class="progress-bar" style="width:0%"></div></div>
+        `;
+        uploadList.appendChild(item);
+        const bar = item.querySelector('.progress-bar');
+        let pct = 0;
+        const iv = setInterval(() => {
+          pct += Math.random() * 20;
+          if (pct >= 100) { pct = 100; clearInterval(iv); Toast.success(`${file.name} 上传完成`); }
+          bar.style.width = pct + '%';
+        }, 150);
+
+        // Add to file list
+        const ext = file.name.split('.').pop();
+        const iconMap = { pdf:'📄', png:'🖼', jpg:'🖼', gif:'🖼', mp4:'🎬', mp3:'🎵', csv:'📊', json:'{}', md:'📝', py:'🐍', js:'📜' };
+        files.push({ id: Date.now(), name: file.name, icon: iconMap[ext] || '📁', size: (file.size/1024).toFixed(0) + ' KB' });
+        renderFileList();
+      });
+    }
+
+    // ── Text Selection ──────────────────────────────────────────────────────
+    function selectAllText() {
+      const el = document.getElementById('selectable-text');
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    function copySelectedText() {
+      const sel = window.getSelection();
+      const text = sel.toString();
+      if (text) {
+        navigator.clipboard?.writeText(text).then(() => Toast.success('已复制到剪贴板'));
+        document.getElementById('selection-info').textContent = `已复制 ${text.length} 字符`;
+      } else {
+        Toast.warning('请先选中文本');
+      }
+    }
+    document.getElementById('selectable-text').addEventListener('mouseup', () => {
+      const sel = window.getSelection().toString();
+      document.getElementById('selection-info').textContent = sel ? `已选中 ${sel.length} 字符` : '';
+    });
+
+    // ── Keyboard Shortcuts (A20) ─────────────────────────────────────────────
+    const keyMap = {
+      'c': 'key-c', 'v': 'key-v', 'x': 'key-x', 'z': 'key-z', 's': 'key-s'
+    };
+    const ctrlMap = {
+      'c': ['key-ctrl-1','key-c'], 'v': ['key-ctrl-2','key-v'],
+      'x': ['key-ctrl-3','key-x'], 'z': ['key-ctrl-4','key-z'], 's': ['key-ctrl-5','key-s']
+    };
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey && !e.shiftKey && ctrlMap[e.key.toLowerCase()]) {
+        const keys = ctrlMap[e.key.toLowerCase()];
+        keys.forEach(k => { const el = document.getElementById(k); if (el) { el.classList.add('key-highlight'); setTimeout(() => el.classList.remove('key-highlight'), 300); } });
+        const actions = { c: '复制', v: '粘贴', x: '剪切', z: '撤销', s: '保存' };
+        if (e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 's') return; // allow browser defaults for copy/paste
+        if (e.key.toLowerCase() === 's') { e.preventDefault(); Toast.success('文件已保存 (Ctrl+S)'); }
+      }
+    });
+  </script>
+</body>
+</html>
