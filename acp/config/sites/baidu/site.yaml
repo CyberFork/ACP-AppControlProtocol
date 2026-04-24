@@ -1,0 +1,17 @@
+# 百度站点配置（公开）
+site:
+  name: baidu
+  url: https://www.baidu.com
+  description: 百度搜索
+
+pages:
+  home:
+    url_pattern: "baidu.com/$"
+    title: "百度一下，你就知道"
+    key_elements:
+      search_input: "搜索输入框"
+      search_btn: "百度一下按钮"
+
+  results:
+    url_pattern: "baidu.com/s"
+    title: "*_百度搜索"

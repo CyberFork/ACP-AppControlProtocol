@@ -1,0 +1,15 @@
+# 视觉兜底模块依赖
+# 安装：pip install -r acp/vision/requirements.txt
+
+# YOLOv8 推理（优先使用，功能完整）
+# 包含 ultralytics + pytorch + numpy + PIL
+ultralytics>=8.0
+
+# ONNX Runtime（轻量替代，ultralytics 安装失败时使用）
+onnxruntime>=1.16
+
+# 图像处理
+Pillow>=10.0
+
+# MobileSAM（Phase 2 实现时解注释）
+# git+https://github.com/ChaoningZhang/MobileSAM.git

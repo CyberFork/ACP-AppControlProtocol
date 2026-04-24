@@ -1,0 +1,61 @@
+# App Configuration
+# 已知 App 的配置信息，用于工具选择和初始化
+
+apps:
+  # ---- 社交媒体 ----
+
+  - app_id: xiaohongshu
+    name: 小红书
+    platform: web
+    base_url: https://www.xiaohongshu.com
+    preferred_tool: web-mcp
+    notes: 无专用 MCP，使用 Playwright 操作 Web 版
+
+  - app_id: weibo
+    name: 微博
+    platform: web
+    base_url: https://weibo.com
+    preferred_tool: web-mcp
+
+  - app_id: twitter
+    name: Twitter/X
+    platform: web
+    base_url: https://twitter.com
+    preferred_tool: web-mcp
+
+  # ---- 即时通讯 ----
+
+  - app_id: wechat_web
+    name: 微信网页版
+    platform: web
+    base_url: https://web.wechat.com
+    preferred_tool: web-mcp
+    notes: 微信 Web 版，功能受限；完整功能需 android-mcp
+
+  # ---- 搜索引擎 ----
+
+  - app_id: google
+    name: Google 搜索
+    platform: web
+    base_url: https://www.google.com
+    preferred_tool: web-mcp
+
+  - app_id: baidu
+    name: 百度搜索
+    platform: web
+    base_url: https://www.baidu.com
+    preferred_tool: web-mcp
+
+  # ---- 内容平台 ----
+
+  - app_id: bilibili
+    name: B站
+    platform: web
+    base_url: https://www.bilibili.com
+    preferred_tool: web-mcp
+
+  - app_id: zhihu
+    name: 知乎
+    platform: web
+    base_url: https://www.zhihu.com
+    preferred_tool: web-mcp

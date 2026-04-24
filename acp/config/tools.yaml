@@ -1,0 +1,100 @@
+# MCP Tool Registry Configuration
+# 工具注册配置，按 Tier 分层
+# 字段说明：
+#   tool_id:        工具唯一标识
+#   tier:           层级 1=专用, 2=泛用, 3=视觉
+#   name:           显示名称
+#   description:    功能描述
+#   supported_apps: 支持的 App（"*" 表示通配，"*_web" 表示以 _web 结尾的 App）
+#   capabilities:   支持的操作列表
+#   platform:       目标平台 (web / android / ios / cross_platform)
+#   backend:        底层技术实现
+#   auth_required:  是否需要认证
+#   reliability:    可靠性评分 (0.0-1.0)
+
+tools:
+  # ---- Tier 1: 第三方专用 MCP ----
+  # 由服务方维护，接口稳定，直接调业务 API
+
+  - tool_id: feishu-mcp
+    tier: 1
+    name: 飞书 MCP
+    description: 飞书官方 MCP，支持消息/文档/日历操作
+    supported_apps:
+      - feishu
+      - lark
+    capabilities:
+      - send_message
+      - read_message
+      - read_document
+      - create_document
+      - create_calendar
+      - navigate
+      - get_elements
+      - click
+      - type
+      - screenshot
+    platform: cross_platform
+    auth_required: true
+    reliability: 0.99
+
+  # ---- Tier 2: 平台泛用 MCP ----
+  # 覆盖无专用 API 的 App
+
+  - tool_id: web-mcp
+    tier: 2
+    name: Web 泛用 MCP
+    description: 基于 Playwright 的 Web/H5 自动化
+    supported_apps:
+      - "*_web"
+      - "*"         # Web 平台通配
+    capabilities:
+      - navigate
+      - get_elements
+      - click
+      - type
+      - scroll
+      - screenshot
+      - get_page_state
+    platform: web
+    backend: playwright
+    auth_required: false
+    reliability: 0.95
+
+  # 预留：android-mcp（阶段 4）
+  # - tool_id: android-mcp
+  #   tier: 2
+  #   platform: android
+  #   backend: uiautomator2
+  #   capabilities:
+  #     - navigate
+  #     - get_elements
+  #     - click
+  #     - type
+  #     - scroll
+  #     - screenshot
+  #     - get_page_state
+
+  # 预留：ios-mcp（阶段 4）
+  # - tool_id: ios-mcp
+  #   tier: 2
+  #   platform: ios
+  #   backend: appium_xcuitest
+
+  # ---- Tier 3: 视觉兜底 MCP ----
+  # 无控件树时使用
+
+  - tool_id: vision-mcp
+    tier: 3
+    name: 视觉兜底 MCP
+    description: 基于视觉模型的截图识别 + 坐标操作（OmniParser V2 / ShowUI-2B）
+    supported_apps:
+      - "*"
+    capabilities:
+      - screenshot
+      - click_at
+      - recognize_elements
+    platform: cross_platform
+    backend: omniparser_v2    # TODO: 阶段 4 实现
+    auth_required: false
+    reliability: 0.75

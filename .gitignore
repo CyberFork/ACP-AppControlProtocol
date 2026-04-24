@@ -1,0 +1,28 @@
+# 环境
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 凭证
+acp/config/sites/*/credentials.yaml
+
+# 模型权重（太大不入库）
+models/base/
+models/adapters/*/
+*.pt
+*.onnx
+*.bin
+*.safetensors
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 系统
+.DS_Store
+
+# Claude Code 内部文件
+.claude/
+.plans/

@@ -1,0 +1,14 @@
+# 百度操作流程（公开）
+flows:
+  search:
+    description: "百度搜索"
+    steps:
+      - action: navigate
+        url: https://www.baidu.com
+      - action: type
+        target: "搜索输入框"
+        value: "${query}"
+      - action: key
+        key: Enter
+      - action: verify
+        expected: "页面标题包含搜索词"

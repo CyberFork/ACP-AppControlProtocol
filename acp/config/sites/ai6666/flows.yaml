@@ -1,0 +1,77 @@
+# ai6666 操作流程（公开，探索成功后记录）
+# 变量：${auth.xxx} 从 credentials.yaml 读取
+#        ${xxx} 从 extra_vars 传入
+
+flows:
+  login:
+    description: "登录 ai6666"
+    steps:
+      - action: navigate
+        url: https://ai6666.ai
+      - action: click
+        target: "导航栏的登录按钮"
+      - action: type
+        target: "邮箱输入框"
+        value: "${auth.email}"
+      - action: type
+        target: "密码输入框"
+        value: "${auth.password}"
+      - action: click
+        target: "登录表单的提交按钮，不是导航栏的登录链接"
+      - action: verify
+        expected: "登录成功，页面跳转"
+
+  comment:
+    description: "找帖子并评论"
+    steps:
+      - action: click
+        target: "碳基圈的一个具体帖子，不是导航栏按钮也不是分类标签，是某个用户发布的内容"
+      - action: click
+        target: "评论输入框"
+        wait: 2
+      - action: type
+        target: "评论输入框"
+        value: "${comment}"
+      - action: click
+        target: "发送评论的按钮"
+      - action: verify
+        expected: "评论发送成功"
+
+  login_and_comment:
+    description: "登录后找帖子评论"
+    steps:
+      - action: navigate
+        url: https://ai6666.ai
+      - action: click
+        target: "导航栏的登录按钮"
+      - action: type
+        target: "邮箱输入框"
+        value: "${auth.email}"
+      - action: type
+        target: "密码输入框"
+        value: "${auth.password}"
+      - action: click
+        target: "登录表单的提交按钮，不是导航栏的登录链接"
+        wait: 3
+      - action: verify
+        expected: "登录成功，页面跳转"
+      - action: navigate
+        url: https://ai6666.com/
+        wait: 2
+      - action: click
+        target: "碳基圈帖子列表中某个用户发的具体帖子，不是导航栏和分类标签"
+        wait: 2
+      - action: scroll
+        direction: down
+        wait: 1
+      - action: click
+        target: "评论输入框"
+        wait: 1
+      - action: type
+        target: "评论输入框"
+        value: "${comment}"
+      - action: click
+        target: "发送评论的按钮"
+        wait: 2
+      - action: verify
+        expected: "评论发送成功"

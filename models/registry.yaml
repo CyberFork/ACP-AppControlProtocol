@@ -1,0 +1,28 @@
+# ACP 适配器注册表
+# 格式：
+#   <app_id>:
+#     latest: <version>
+#     base_model: <模型名>
+#     accuracy: <0.0-1.0>
+#     training_samples: <样本数>
+#     adapter_path: adapters/<app_id>/<version>/
+#
+# app_id 命名规范：
+#   Android: {package_name}         e.g. com.tencent.mm
+#   iOS:     {bundle_id}            e.g. com.tencent.xin
+#   Web:     web--{domain}          e.g. web--ai6666.com
+
+# ── 示例（占位，实际训练后填充）────────────────────────────────────────────
+# web--ai6666.com:
+#   latest: v1
+#   base_model: showui-2b
+#   accuracy: 0.92
+#   training_samples: 150
+#   adapter_path: adapters/web--ai6666.com/v1/
+#
+# com.tencent.mm:
+#   latest: v8.0.51
+#   base_model: showui-2b
+#   accuracy: 0.89
+#   training_samples: 350
+#   adapter_path: adapters/com.tencent.mm/v8.0.51/

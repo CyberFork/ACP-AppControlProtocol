@@ -1,0 +1,23 @@
+# ai6666 站点配置（公开）
+site:
+  name: ai6666
+  url: https://ai6666.ai
+  actual_url: https://ai6666.com  # 实际跳转地址
+  description: AI 音乐/社区平台（碳基圈 - AIHireHumans）
+
+# 已知页面结构
+pages:
+  home:
+    url_pattern: "ai6666.com/$"
+    title: "碳基圈 - AIHireHumans"
+    key_elements:
+      login_btn: "登录按钮，导航栏右侧"
+      register_btn: "注册按钮"
+
+  login:
+    url_pattern: "ai6666.com/login"
+    title: "登录"
+    key_elements:
+      email_input: "邮箱输入框"
+      password_input: "密码输入框"
+      submit_btn: "登录提交按钮"
