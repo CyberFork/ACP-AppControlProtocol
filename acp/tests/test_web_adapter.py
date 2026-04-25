@@ -19,8 +19,12 @@ import asyncio
 import sys
 from typing import Any
 
+import pytest
+
 from acp.adapters.web_adapter import WebAdapter
 from acp.schema.elements import ElementType
+
+pytestmark = pytest.mark.asyncio
 
 
 # ---------------------------------------------------------------------------

@@ -146,9 +146,11 @@ class UITrajectoryDataset(_TorchDataset):
 
     @classmethod
     def from_custom(cls, jsonl_path: str) -> "UITrajectoryDataset":
-        """加载自定义 JSONL 格式（FlowRecorder 录制的轨迹）。
+        """加载自定义 JSONL 格式。
 
-        每行已是统一格式，直接解析。
+        支持两种格式：
+        1. 统一格式（collect_traces.py 输出）：每行含 screenshot/instruction/elements/action
+        2. testenv auto_label.js 导出格式：每行含 session_id/page/elements/actions
         """
         path = Path(jsonl_path)
         if not path.exists():
@@ -161,11 +163,16 @@ class UITrajectoryDataset(_TorchDataset):
                 if not line:
                     continue
                 try:
-                    sample = json.loads(line)
+                    record = json.loads(line)
                 except json.JSONDecodeError as e:
                     logger.warning("第 %d 行解析失败：%s", lineno, e)
                     continue
-                samples.append(sample)
+                # auto_label.js 会话格式：含 session_id + actions 列表
+                if "session_id" in record and "actions" in record:
+                    for s in cls._convert_autolabel_session(record):
+                        samples.append(s)
+                else:
+                    samples.append(record)
 
         logger.info("custom JSONL: 加载 %d 条样本（文件：%s）", len(samples), jsonl_path)
         return cls(samples)
@@ -178,8 +185,9 @@ class UITrajectoryDataset(_TorchDataset):
     ) -> Optional[dict[str, Any]]:
         """AITW 单步 → 统一格式。"""
         screenshot = raw.get("screenshot_path", "")
-        instruction = raw.get("goal", "")
-        action_type = raw.get("action_type", "")
+        instruction = raw.get("instruction", raw.get("goal", ""))
+        # gesture_type 是 AITW 原始字段，action_type 为预处理后的别名
+        action_type = raw.get("gesture_type", raw.get("action_type", ""))
         touch = raw.get("touch_point", [0.5, 0.5])
         typed = raw.get("typed_text", "")
 
@@ -257,7 +265,8 @@ class UITrajectoryDataset(_TorchDataset):
         item: dict, base_dir: Path
     ) -> Optional[dict[str, Any]]:
         """ScreenSpot 单条 → 统一格式（grounding：给出目标框）。"""
-        screenshot = item.get("img_filename", item.get("screenshot", ""))
+        # img_path 是 ScreenSpot 原始字段，img_filename 为常见别名
+        screenshot = item.get("img_path", item.get("img_filename", item.get("screenshot", "")))
         instruction = item.get("instruction", "")
         bbox = item.get("bbox", None)
 
@@ -271,3 +280,67 @@ class UITrajectoryDataset(_TorchDataset):
             "elements": [{"id": "target", "type": "target", "bbox": bbox, "label": instruction}],
             "action": {"type": "click", "coord": coord},
         }
+
+    @staticmethod
+    def _convert_autolabel_session(session: dict) -> list[dict[str, Any]]:
+        """auto_label.js 会话 → 统一格式列表（每条 action 一条样本）。
+
+        auto_label.js 导出格式：
+          session_id, page, screenshot(base64 or null),
+          elements([{id, type, bbox:[x,y,w,h], text, ...}]),
+          actions([{type, coord, element, value, key, ...}])
+        """
+        screenshot = session.get("screenshot") or ""
+
+        # 元素列表：bbox 格式 [x, y, w, h] → [x1, y1, x2, y2]
+        unified_elements: list[dict[str, Any]] = []
+        for el in session.get("elements", []):
+            raw_bbox = el.get("bbox", [0, 0, 0, 0])
+            if len(raw_bbox) == 4:
+                x, y, w, h = raw_bbox
+                bbox = [x, y, x + w, y + h]
+            else:
+                bbox = raw_bbox
+            unified_elements.append({
+                "id": el.get("id", ""),
+                "type": el.get("type", "unknown"),
+                "bbox": bbox,
+                "label": el.get("text", ""),
+            })
+
+        samples: list[dict[str, Any]] = []
+        for act in session.get("actions", []):
+            action_type = act.get("type", "click").lower()
+            coord = act.get("coord", [0, 0])
+            element_info = act.get("element") or {}
+            value = act.get("value", "")
+
+            if action_type in ("click", "dblclick", "right_click"):
+                action: dict[str, Any] = {"type": action_type, "coord": coord}
+            elif action_type == "input":
+                action = {"type": "type", "text": value, "coord": coord}
+            elif action_type == "scroll":
+                scroll_y = act.get("scrollY", 0)
+                action = {
+                    "type": "scroll",
+                    "direction": "down" if scroll_y >= 0 else "up",
+                    "coord": coord,
+                }
+            elif action_type == "keydown":
+                action = {"type": "keydown", "key": act.get("key", "")}
+            elif action_type in ("dragstart", "drop"):
+                action = {"type": action_type, "coord": coord}
+            else:
+                action = {"type": action_type, "coord": coord}
+
+            label = element_info.get("text", "") or element_info.get("type", action_type)
+            instruction = f"{action_type} {label}".strip()
+
+            samples.append({
+                "screenshot": screenshot,
+                "instruction": instruction,
+                "elements": unified_elements,
+                "action": action,
+            })
+
+        return samples

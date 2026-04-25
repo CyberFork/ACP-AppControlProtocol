@@ -52,6 +52,7 @@ class WebMCP(MCPTool):
         headless: bool = True,
         browser_type: str = "chromium",
         slow_mo: int = 0,
+        cookie_file: str = None,
     ) -> None:
         """初始化 WebMCP。
 
@@ -60,6 +61,7 @@ class WebMCP(MCPTool):
             headless:     是否无头模式（adapter 为 None 时生效）
             browser_type: 浏览器类型，"chromium" / "firefox" / "webkit"
             slow_mo:      操作延迟毫秒数，便于调试
+            cookie_file:  持久化 cookie 的文件路径（None 则不持久化）
         """
         if adapter is not None:
             self._adapter = adapter
@@ -69,6 +71,7 @@ class WebMCP(MCPTool):
                 headless=headless,
                 browser_type=browser_type,
                 slow_mo=slow_mo,
+                cookie_file=cookie_file,
             )
             self._owns_adapter = True
 

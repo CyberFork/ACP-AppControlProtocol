@@ -13,7 +13,9 @@ Web/H5 平台适配器
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -329,10 +331,12 @@ class WebAdapter(BaseAdapter):
         headless: bool = True,
         browser_type: str = "chromium",
         slow_mo: int = 0,
+        cookie_file: str = None,
     ) -> None:
         self._headless = headless
         self._browser_type = browser_type
         self._slow_mo = slow_mo
+        self._cookie_file = cookie_file
 
         self._playwright: Optional[Playwright] = None
         self._browser: Optional[Browser] = None
@@ -381,8 +385,28 @@ class WebAdapter(BaseAdapter):
         """)
         self._page = await self._context.new_page()
 
+        # 加载持久化 cookies
+        if self._cookie_file:
+            cookie_path = Path(self._cookie_file)
+            if cookie_path.exists():
+                with open(cookie_path) as f:
+                    cookies = json.load(f)
+                await self._context.add_cookies(cookies)
+                logger.info("已加载 cookies: %s", self._cookie_file)
+
+    async def save_cookies(self) -> None:
+        """将当前 context 的 cookies 保存到 cookie_file。"""
+        if not self._cookie_file or not self._context:
+            return
+        cookies = await self._context.cookies()
+        with open(self._cookie_file, "w") as f:
+            json.dump(cookies, f)
+        logger.info("已保存 cookies: %s", self._cookie_file)
+
     async def close(self) -> None:
         """关闭浏览器并释放 Playwright 资源。"""
+        if self._cookie_file and self._context:
+            await self.save_cookies()
         if self._context:
             await self._context.close()
         if self._browser:

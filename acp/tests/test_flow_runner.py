@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -442,17 +442,24 @@ flows:
         runner = make_runner(tmp_path, flows, mcp=mock_mcp)
         runner._find_element = AsyncMock(return_value="e001")
 
-        # 第一次 click 失败，重试后成功
+        # 实际调用顺序：
+        # 1. get_page_state（click 前取 before_state）
+        # 2. click → 失败
+        # 3. click → 重试成功
+        # 4. get_page_state（_verify_click 内取 after_state）
+        page_state_result = make_action_result(success=True)
         mock_mcp.execute = AsyncMock(side_effect=[
-            ActionResult(success=False, error="点击失败"),  # 第一次 click
-            ActionResult(success=True),                     # 重试 click
+            page_state_result,                              # get_page_state (before)
+            ActionResult(success=False, error="点击失败"),  # 第一次 click 失败
+            ActionResult(success=True),                     # 重试 click 成功
+            page_state_result,                              # get_page_state (_verify_click)
         ])
 
         ok = await runner.run("click_retry_flow")
 
         # 重试成功，整体应成功
         assert ok is True
-        assert mock_mcp.execute.call_count == 2
+        assert mock_mcp.execute.call_count == 4
 
 
 # ---------------------------------------------------------------------------
@@ -491,7 +498,7 @@ flows:
         assert ok is True
         mock_instance.start.assert_called_once()
         mock_instance.close.assert_called_once()
-        MockWebMCP.assert_called_once_with(headless=True)
+        MockWebMCP.assert_called_once_with(headless=True, cookie_file=ANY)
 
     @pytest.mark.asyncio
     async def test_mcp_closed_on_exception(self, tmp_path):

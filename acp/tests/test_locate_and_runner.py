@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 import pytest
 
 from acp.adapters.web_adapter import WebAdapter
@@ -403,4 +403,4 @@ flows:
             mock_instance.start.assert_called_once()
             mock_instance.close.assert_called_once()
             # 构造时应传入 headless=True
-            MockWebMCP.assert_called_once_with(headless=True)
+            MockWebMCP.assert_called_once_with(headless=True, cookie_file=ANY)

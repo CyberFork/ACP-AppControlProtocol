@@ -6,6 +6,8 @@ flows:
   login:
     description: "登录 ai6666"
     steps:
+      - action: check_login
+        wait: 2
       - action: navigate
         url: https://ai6666.ai
       - action: click

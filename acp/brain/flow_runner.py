@@ -93,8 +93,13 @@ class FlowRunner:
         self._base_url = os.environ.get("ACP_LLM_BASE_URL", "https://api.deepseek.com/v1")
         self._model = os.environ.get("ACP_LLM_MODEL", "deepseek-chat")
 
+        # Cookie 持久化
+        self._cookie_file = str(self._site_dir / "cookies.json")
+
         # 执行日志
         self.log: list[dict] = []
+        # 流程内跳过标志（check_login 已登录时设置）
+        self._skip_remaining = False
 
     def _load_yaml(self, filename: str) -> dict:
         path = self._site_dir / filename
@@ -468,6 +473,44 @@ class FlowRunner:
             print(f"    结果: 通过（无错误信息）")
             return True
 
+        elif action == "check_login":
+            # 导航到站点首页，用 LLM 判断是否已登录
+            site_url = (self._site.get("site") or {}).get("url", "")
+            if site_url:
+                await self._call_mcp("navigate", {"url": site_url})
+                await asyncio.sleep(wait)
+
+            elements = await self._get_elements_via_mcp()
+            state = await self._get_page_state_via_mcp()
+            page_title = state.title if state else "未知页面"
+            page_url = state.url if state else ""
+            elem_text = self._elements_summary(elements)
+
+            prompt = f"""你是 Web 自动化助手。
+当前页面：{page_title} ({page_url})
+
+页面元素：
+{elem_text}
+
+任务：判断用户当前是否已经登录。
+- 已登录：页面有用户头像、用户名、个人中心、退出登录等元素，没有明显的"登录"/"注册"按钮
+- 未登录：页面有登录按钮、注册按钮、"请登录"提示等
+
+返回 JSON：{{"logged_in": true或false, "reasoning": "判断理由"}}
+只返回 JSON。"""
+
+            try:
+                result = await self._ask_llm(prompt)
+                logged_in = result.get("logged_in", False)
+                reasoning = result.get("reasoning", "")
+                print(f"    check_login: {'已登录' if logged_in else '未登录'} — {reasoning}")
+                if logged_in:
+                    self._skip_remaining = True
+                    print(f"    已登录，跳过后续步骤")
+            except Exception as exc:
+                print(f"    check_login LLM 判断失败: {exc}，继续执行登录流程")
+            return True
+
         elif action == "wait":
             await asyncio.sleep(wait)
             return True
@@ -517,9 +560,12 @@ class FlowRunner:
             print(f"  录制模式: 开启")
         print(f"{'='*60}")
 
+        # 重置跳过标志
+        self._skip_remaining = False
+
         # 启动 MCP（WebMCP 内部管理 WebAdapter 生命周期）
         if self._owns_mcp:
-            self._mcp = WebMCP(headless=self._headless)
+            self._mcp = WebMCP(headless=self._headless, cookie_file=self._cookie_file)
             await self._mcp.start()
             # 提供向后兼容的 _adapter 引用
             self._adapter = self._mcp._adapter
@@ -527,6 +573,9 @@ class FlowRunner:
         all_ok = True
         try:
             for i, step in enumerate(steps):
+                if self._skip_remaining:
+                    break
+
                 action = step.get("action", "")
                 target = step.get("target", step.get("url", step.get("expected", "")))
                 print(f"\n  步骤 {i+1}/{len(steps)}: {action} -> {target}")
@@ -590,7 +639,7 @@ class FlowRunner:
     ) -> bool:
         """顺序执行多个流程（共享同一个浏览器）。"""
         if self._owns_mcp:
-            self._mcp = WebMCP(headless=self._headless)
+            self._mcp = WebMCP(headless=self._headless, cookie_file=self._cookie_file)
             await self._mcp.start()
             self._adapter = self._mcp._adapter
             self._owns_mcp = False  # 防止单个 run 关闭

@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
+
 from acp.mcp.registry import MCPRegistry, MCPToolInfo
 from acp.mcp.protocol import MCPTool
 from acp.mcp.tools.web_mcp import WebMCP
@@ -360,6 +362,7 @@ def _build_mock_adapter() -> MagicMock:
     return adapter
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_navigate() -> None:
     print("\n[TEST] WebMCP.execute('navigate')")
     adapter = _build_mock_adapter()
@@ -375,6 +378,7 @@ async def test_web_mcp_navigate() -> None:
     check("adapter.navigate 被调用一次", True)
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_navigate_missing_url() -> None:
     print("\n[TEST] WebMCP.execute('navigate') — 缺少 url 参数")
     adapter = _build_mock_adapter()
@@ -385,6 +389,7 @@ async def test_web_mcp_navigate_missing_url() -> None:
     check("有 error 信息", bool(result.error))
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_get_elements() -> None:
     print("\n[TEST] WebMCP.execute('get_elements')")
     adapter = _build_mock_adapter()
@@ -398,6 +403,7 @@ async def test_web_mcp_get_elements() -> None:
         check("element_count=1", result.data["element_count"] == 1)
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_click() -> None:
     print("\n[TEST] WebMCP.execute('click')")
     adapter = _build_mock_adapter()
@@ -409,6 +415,7 @@ async def test_web_mcp_click() -> None:
     check("adapter.click 参数正确", True)
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_type() -> None:
     print("\n[TEST] WebMCP.execute('type')")
     adapter = _build_mock_adapter()
@@ -420,6 +427,7 @@ async def test_web_mcp_type() -> None:
     check("adapter.type 参数正确", True)
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_scroll() -> None:
     print("\n[TEST] WebMCP.execute('scroll')")
     adapter = _build_mock_adapter()
@@ -431,6 +439,7 @@ async def test_web_mcp_scroll() -> None:
     check("adapter.scroll 参数正确", True)
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_screenshot() -> None:
     print("\n[TEST] WebMCP.execute('screenshot')")
     adapter = _build_mock_adapter()
@@ -443,6 +452,7 @@ async def test_web_mcp_screenshot() -> None:
     check("data 含 size_bytes", result.data is not None and "size_bytes" in result.data)
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_get_page_state() -> None:
     print("\n[TEST] WebMCP.execute('get_page_state')")
     adapter = _build_mock_adapter()
@@ -455,6 +465,7 @@ async def test_web_mcp_get_page_state() -> None:
     check("返回 page_state", result.page_state is not None)
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_unknown_method() -> None:
     print("\n[TEST] WebMCP.execute — 未知方法")
     adapter = _build_mock_adapter()
@@ -465,6 +476,7 @@ async def test_web_mcp_unknown_method() -> None:
     check("有 error 信息", bool(result.error))
 
 
+@pytest.mark.asyncio
 async def test_web_mcp_supports() -> None:
     print("\n[TEST] WebMCP.supports()")
     adapter = _build_mock_adapter()
@@ -486,6 +498,7 @@ def test_mcp_tool_is_abstract() -> None:
 # 实网络集成测试（可选，需要 playwright）
 # ---------------------------------------------------------------------------
 
+@pytest.mark.asyncio
 async def test_web_mcp_live_navigate() -> None:
     """集成测试：用真实 Playwright 打开页面并获取元素（需要网络）。"""
     print("\n[TEST] WebMCP 集成测试 — 真实浏览器（可选）")

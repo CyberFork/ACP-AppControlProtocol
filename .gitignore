@@ -6,6 +6,7 @@ __pycache__/
 
 # 凭证
 acp/config/sites/*/credentials.yaml
+acp/config/sites/*/cookies.json
 
 # 模型权重（太大不入库）
 models/base/
