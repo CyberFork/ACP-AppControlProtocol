@@ -1,0 +1,113 @@
+# ACP Eval Testcase 集
+# 10 条覆盖：弹窗关闭、登录表单、跨 App 复制粘贴、Tab 切换
+#
+# success_check 语法：
+#   js:element-id.property           → 布尔 DOM 属性
+#   js:element-id.property=value     → 值比较
+#   js:element-id.classList.contains(class) → 类名检查
+#
+# url 占位符 {TESTENV} 在运行时由 --base-url 替换
+
+testcases:
+
+  # ── tc01：弹窗+登录（A1 工程辅助模式，上限参考）────────────────────────
+  - id: tc01_popup_decompose
+    instruction: "关闭弹窗，然后用用户名 demo 密码 123456 登录"
+    url: "{TESTENV}/pages/popup-login.html"
+    backend: mini_a
+    mode: decompose
+    success_check: "js:login-success.visible"
+    repeats: 3
+    tags: [modal, login, compound]
+
+  # ── tc02：弹窗+登录（A2 naive 基线，与 Demo B 对比）───────────────────
+  - id: tc02_popup_naive
+    instruction: "关闭弹窗，然后用用户名 demo 密码 123456 登录"
+    url: "{TESTENV}/pages/popup-login.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:login-success.visible"
+    repeats: 3
+    tags: [modal, login, compound]
+
+  # ── tc03：只关弹窗（最简单单步）──────────────────────────────────────
+  - id: tc03_close_modal_only
+    instruction: "关闭页面上的今日特惠弹窗"
+    url: "{TESTENV}/pages/popup-login.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:modal-overlay.hidden"
+    repeats: 3
+    tags: [modal, single_step]
+
+  # ── tc04：只登录（无弹窗干扰）────────────────────────────────────────
+  # 注意：此 testcase 需要页面弹窗已关，用单独 URL 参数触发无弹窗状态
+  # 暂时复用 popup-login.html，naive 模式下检验 LLM 能否跳过弹窗直接登录
+  - id: tc04_login_only
+    instruction: "用用户名 demo 密码 123456 登录，如果有弹窗先关掉"
+    url: "{TESTENV}/pages/popup-login.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:login-success.visible"
+    repeats: 3
+    tags: [login, form]
+
+  # ── tc05：只填用户名（最简表单操作）──────────────────────────────────
+  - id: tc05_fill_username
+    instruction: "在用户名输入框填写 demo（如果有弹窗先关掉）"
+    url: "{TESTENV}/pages/popup-login.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:login-username.value=demo"
+    repeats: 3
+    tags: [form, single_step]
+
+  # ── tc06：综合表单提交（T1 页面）──────────────────────────────────────
+  - id: tc06_t1_form_login
+    instruction: "用邮箱 test@example.com 和密码 password123 登录"
+    url: "{TESTENV}/pages/t1_form.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:toast-container.textContent=登录成功"
+    repeats: 3
+    tags: [form, login]
+
+  # ── tc07：列表 + Modal（T3 页面）──────────────────────────────────────
+  - id: tc07_t3_open_modal
+    instruction: "点击列表第一个项目，打开详情弹窗"
+    url: "{TESTENV}/pages/t3_list_modal.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:item-modal.classList.contains(active)"
+    repeats: 3
+    tags: [modal, list]
+
+  # ── tc08：跨 App 复制（notes-app）────────────────────────────────────
+  - id: tc08_cross_copy
+    instruction: "点击第一条笔记的复制按钮"
+    url: "{TESTENV}/pages/cross-app/notes-app.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:note-1-copy.textContent=已复制"
+    repeats: 3
+    tags: [clipboard, cross_app]
+
+  # ── tc09：跨 App 粘贴发送（chat-app）────────────────────────────────
+  - id: tc09_cross_send
+    instruction: "在输入框输入文字「ACP 测试消息」并点发送按钮"
+    url: "{TESTENV}/pages/cross-app/chat-app.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:message-list.children.length>2"
+    repeats: 3
+    tags: [form, cross_app]
+
+  # ── tc10：Tab 切换（T2 Dashboard）─────────────────────────────────────
+  - id: tc10_t2_tab_users
+    instruction: "点击「用户列表」标签页"
+    url: "{TESTENV}/pages/t2_dashboard.html"
+    backend: mini_a
+    mode: naive
+    success_check: "js:tab-btn-users.classList.contains(active)"
+    repeats: 3
+    tags: [navigation, single_step]

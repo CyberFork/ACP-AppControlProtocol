@@ -54,7 +54,7 @@ def main():
 
     os.chdir(TESTENV_DIR)
 
-    pages = sorted((TESTENV_DIR / 'pages').glob('*.html'))
+    pages = sorted((TESTENV_DIR / 'pages').glob('**/*.html'))
     print(f"\n\033[35m{'='*50}\033[0m")
     print(f"\033[1m ACP 测试环境服务器\033[0m")
     print(f"\033[35m{'='*50}\033[0m")
@@ -62,7 +62,8 @@ def main():
     print(f"\033[32m ✓ 入口:   http://localhost:{args.port}/index.html\033[0m")
     print(f"\033[33m\n 测试页面:\033[0m")
     for p in pages:
-        print(f"   http://localhost:{args.port}/pages/{p.name}")
+        rel = p.relative_to(TESTENV_DIR)
+        print(f"   http://localhost:{args.port}/{rel.as_posix()}")
     print(f"\033[35m{'='*50}\033[0m\n")
 
     with socketserver.TCPServer((args.host, args.port), TestEnvHandler) as httpd:

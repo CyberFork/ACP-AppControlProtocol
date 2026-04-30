@@ -374,6 +374,7 @@ class WebAdapter(BaseAdapter):
             extra_http_headers={
                 "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.1",
             },
+            permissions=["clipboard-read", "clipboard-write"],
         )
         # 在每个页面加载前注入反检测脚本
         await self._context.add_init_script("""

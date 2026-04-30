@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T10 我的笔记 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../../static/style.css">
+  <style>
+    .page-wrap { max-width: 640px; margin: 0 auto; padding: 24px; }
+    .page-title { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .page-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+
+    .note-card {
+      background: white; border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; margin-bottom: 16px; box-shadow: var(--shadow);
+    }
+    .note-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+    .note-title { font-size: 16px; font-weight: 600; }
+    .note-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+    .note-content {
+      font-size: 14px; color: var(--text); line-height: 1.7;
+      border-left: 3px solid var(--border); padding-left: 12px;
+    }
+    .copy-btn {
+      flex-shrink: 0; min-width: 72px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .copy-btn.copied {
+      background: var(--success); color: white; border-color: var(--success);
+    }
+
+    /* 复制状态提示条 */
+    .copy-status {
+      position: fixed; top: 16px; right: 16px;
+      background: #1f2937; color: white;
+      padding: 10px 18px; border-radius: 8px; font-size: 13px;
+      box-shadow: var(--shadow-lg); opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none; z-index: 999;
+    }
+    .copy-status.show { opacity: 1; transform: translateY(0); }
+
+    .back-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--primary); text-decoration: none; margin-bottom: 16px; }
+    .back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <a href="../../index.html" class="back-link" data-acp-type="link" data-acp-id="back-to-index">
+      &#8592; 返回首页
+    </a>
+
+    <div class="page-title">我的笔记</div>
+    <div class="page-subtitle">点击"复制"将笔记内容写入剪贴板，可在聊天应用中粘贴使用</div>
+
+    <!-- 笔记 1 -->
+    <div class="note-card" data-acp-type="card" data-acp-id="note-1-card">
+      <div class="note-header">
+        <div>
+          <div class="note-title" data-acp-type="text" data-acp-id="note-1-title">
+            会议纪要：产品迭代评审
+          </div>
+          <div class="note-meta">2026-04-28 · 342 字</div>
+        </div>
+        <button class="btn btn-secondary btn-sm copy-btn"
+                data-acp-type="button" data-acp-id="note-1-copy"
+                onclick="copyNote(this, 'note-1-content')">
+          复制
+        </button>
+      </div>
+      <div id="note-1-content" class="note-content" data-acp-type="text" data-acp-id="note-1-content">
+        本次评审确认 Q2 核心功能：用户行为分析看板上线时间提前至 5 月底，
+        搜索优化迭代推迟到 Q3 第一个 Sprint。AI 写作助手功能继续 A/B 测试，
+        转化率达到 15% 后全量发布。下次评审时间：5 月 12 日下午 3 点。
+      </div>
+    </div>
+
+    <!-- 笔记 2 -->
+    <div class="note-card" data-acp-type="card" data-acp-id="note-2-card">
+      <div class="note-header">
+        <div>
+          <div class="note-title" data-acp-type="text" data-acp-id="note-2-title">
+            技术选型：向量数据库调研
+          </div>
+          <div class="note-meta">2026-04-25 · 218 字</div>
+        </div>
+        <button class="btn btn-secondary btn-sm copy-btn"
+                data-acp-type="button" data-acp-id="note-2-copy"
+                onclick="copyNote(this, 'note-2-content')">
+          复制
+        </button>
+      </div>
+      <div id="note-2-content" class="note-content" data-acp-type="text" data-acp-id="note-2-content">
+        对比了 Qdrant、Weaviate、Pinecone 三个方案。Qdrant 本地部署性能最优，
+        单机 QPS 可达 12000，内存占用低；Pinecone 托管方便但成本高；
+        Weaviate 生态丰富但配置复杂。最终推荐 Qdrant，下周完成 PoC 验证。
+      </div>
+    </div>
+
+    <!-- 笔记 3 -->
+    <div class="note-card" data-acp-type="card" data-acp-id="note-3-card">
+      <div class="note-header">
+        <div>
+          <div class="note-title" data-acp-type="text" data-acp-id="note-3-title">
+            灵感记录：ACP 演示脚本
+          </div>
+          <div class="note-meta">2026-04-30 · 156 字</div>
+        </div>
+        <button class="btn btn-secondary btn-sm copy-btn"
+                data-acp-type="button" data-acp-id="note-3-copy"
+                onclick="copyNote(this, 'note-3-content')">
+          复制
+        </button>
+      </div>
+      <div id="note-3-content" class="note-content" data-acp-type="text" data-acp-id="note-3-content">
+        ACP miniDemo 演示流程：1. 打开弹窗登录页 2. 自动关闭广告弹窗 3. 填写登录表单
+        4. 切换到笔记应用复制内容 5. 粘贴到聊天应用发送。
+        全程无人工干预，验证 V-L-A 闭环可行性。
+      </div>
+    </div>
+  </div>
+
+  <!-- 复制状态提示 -->
+  <div id="copy-status" class="copy-status"
+       data-acp-type="status" data-acp-id="copy-status">
+    已复制到剪贴板
+  </div>
+
+  <script>
+    var copyTimer = null;
+
+    function copyNote(btn, contentId) {
+      var contentEl = document.getElementById(contentId);
+      var text = contentEl ? contentEl.textContent.trim() : '';
+      if (!text) return;
+
+      var doSuccess = function() {
+        btn.textContent = '已复制';
+        btn.classList.add('copied');
+
+        var statusEl = document.getElementById('copy-status');
+        statusEl.classList.add('show');
+
+        clearTimeout(copyTimer);
+        copyTimer = setTimeout(function() {
+          btn.textContent = '复制';
+          btn.classList.remove('copied');
+          statusEl.classList.remove('show');
+        }, 2000);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(doSuccess).catch(function() {
+          fallbackCopy(text);
+          doSuccess();
+        });
+      } else {
+        fallbackCopy(text);
+        doSuccess();
+      }
+    }
+
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); } catch(e) {}
+      document.body.removeChild(ta);
+    }
+  </script>
+</body>
+</html>

@@ -29,11 +29,11 @@
 <body>
   <div class="hero">
     <h1>ACP 私有测试环境</h1>
-    <p>基于 UI 交互分类学设计的 8 个综合测试页面，覆盖 33/35 元素类型、24/25 操作类型</p>
+    <p>基于 UI 交互分类学设计的综合测试页面集，覆盖 33/35 元素类型、24/25 操作类型</p>
   </div>
 
   <div class="stats-bar">
-    <div class="stat"><div class="stat-num">8</div><div class="stat-label">测试页面</div></div>
+    <div class="stat"><div class="stat-num">11</div><div class="stat-label">测试页面</div></div>
     <div class="stat"><div class="stat-num">33/35</div><div class="stat-label">UI 元素类型</div></div>
     <div class="stat"><div class="stat-num">24/25</div><div class="stat-label">操作类型</div></div>
     <div class="stat"><div class="stat-num">20/25</div><div class="stat-label">页面模式</div></div>
@@ -121,6 +121,36 @@
       <div class="coverage-tags">
         <span class="coverage-tag">E30 E32 E33</span>
         <span class="coverage-tag action">A01</span>
+      </div>
+    </a>
+
+    <a href="pages/popup-login.html" class="page-card" data-acp-type="card" data-acp-id="nav-t9">
+      <div class="page-card-num">T9</div>
+      <div class="page-card-title">弹窗拦截 + 登录</div>
+      <div class="page-card-desc">进入触发"今日特惠"模态弹窗，关闭后进行用户名/密码登录，验证 miniDemo A 场景</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">弹窗 / Modal</span>
+        <span class="coverage-tag action">关闭弹窗 登录</span>
+      </div>
+    </a>
+
+    <a href="pages/cross-app/notes-app.html" class="page-card" data-acp-type="card" data-acp-id="nav-t10">
+      <div class="page-card-num">T10</div>
+      <div class="page-card-title">笔记应用（复制端）</div>
+      <div class="page-card-desc">3 条笔记数据，每条带"复制"按钮，点击写入 navigator.clipboard，跨 App 场景起点</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">Clipboard Write</span>
+        <span class="coverage-tag action">复制内容</span>
+      </div>
+    </a>
+
+    <a href="pages/cross-app/chat-app.html" class="page-card" data-acp-type="card" data-acp-id="nav-t11">
+      <div class="page-card-num">T11</div>
+      <div class="page-card-title">聊天应用（粘贴端）</div>
+      <div class="page-card-desc">输入框 + 粘贴按钮（读 clipboard）+ 发送按钮 + 消息流，跨 App 场景终点</div>
+      <div class="coverage-tags">
+        <span class="coverage-tag">Clipboard Read</span>
+        <span class="coverage-tag action">粘贴 发送</span>
       </div>
     </a>
   </div>

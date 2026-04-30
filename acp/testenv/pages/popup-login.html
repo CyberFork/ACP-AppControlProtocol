@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>T9 弹窗登录 - ACP TestEnv</title>
+  <link rel="stylesheet" href="../static/style.css">
+  <style>
+    .page-wrap { max-width: 440px; margin: 60px auto; padding: 0 24px; }
+
+    /* 模态遮罩：覆盖 style.css 里的 opacity:0 和 pointer-events:none */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 9999; pointer-events: auto; opacity: 1;
+    }
+    .modal-overlay.hidden { display: none !important; pointer-events: none; }
+    .modal-overlay.hidden { display: none; }
+
+    /* 弹窗主体 */
+    .modal-box {
+      background: white; border-radius: 16px; padding: 32px 28px;
+      max-width: 380px; width: 100%; position: relative;
+      box-shadow: var(--shadow-lg);
+    }
+    .modal-close-btn {
+      position: absolute; top: 12px; right: 14px;
+      background: none; border: none; font-size: 20px; cursor: pointer;
+      color: var(--text-muted); line-height: 1; padding: 4px 8px;
+      border-radius: 6px; transition: background 0.15s, color 0.15s;
+    }
+    .modal-close-btn:hover { background: var(--bg); color: var(--text); }
+    .modal-emoji { font-size: 40px; text-align: center; margin-bottom: 12px; }
+    .modal-title { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 8px; }
+    .modal-body { font-size: 14px; color: var(--text-muted); text-align: center; line-height: 1.6; margin-bottom: 20px; }
+    .modal-cta { width: 100%; }
+
+    /* 登录卡片 */
+    .login-card {
+      background: white; border: 1px solid var(--border); border-radius: 16px;
+      padding: 32px 28px; box-shadow: var(--shadow);
+    }
+    .login-card-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .login-card-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+    .login-submit { width: 100%; margin-top: 4px; }
+
+    /* 成功状态 */
+    .login-success-box {
+      background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px;
+      padding: 24px; text-align: center; display: none;
+    }
+    .login-success-box.visible { display: block; }
+    .login-success-icon { font-size: 36px; margin-bottom: 10px; }
+    .login-success-msg { font-size: 16px; font-weight: 600; color: #065f46; }
+    .login-success-sub { font-size: 13px; color: #059669; margin-top: 4px; }
+
+    .form-error { font-size: 12px; color: var(--danger); margin-top: 4px; display: none; }
+    .form-error.visible { display: block; }
+  </style>
+</head>
+<body>
+
+  <!-- 今日特惠弹窗 -->
+  <div id="modal-overlay" class="modal-overlay"
+       data-acp-type="modal-overlay" data-acp-id="modal-overlay">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-heading">
+      <button id="modal-close" class="modal-close-btn"
+              data-acp-type="button" data-acp-id="modal-close"
+              aria-label="关闭弹窗">&#x2715;</button>
+      <div class="modal-emoji">&#x1F381;</div>
+      <div id="modal-heading" class="modal-title">今日特惠</div>
+      <div class="modal-body">
+        新用户注册立享 30 天免费会员！<br>
+        还有专属礼包等你领取，限时 24 小时。
+      </div>
+      <button class="btn btn-primary modal-cta"
+              data-acp-type="button" data-acp-id="modal-cta"
+              onclick="closeModal()">立即领取</button>
+    </div>
+  </div>
+
+  <!-- 登录主页面 -->
+  <div class="page-wrap">
+    <div class="login-card">
+      <div class="login-card-title">欢迎回来</div>
+      <div class="login-card-subtitle">请登录您的账户继续使用</div>
+
+      <form id="login-form" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="login-username">用户名</label>
+          <input id="login-username" type="text" class="form-input"
+                 placeholder="请输入用户名"
+                 data-acp-type="input" data-acp-id="login-username"
+                 autocomplete="username">
+          <span id="err-username" class="form-error">请输入用户名</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">密码</label>
+          <input id="login-password" type="password" class="form-input"
+                 placeholder="请输入密码"
+                 data-acp-type="input" data-acp-id="login-password"
+                 autocomplete="current-password">
+          <span id="err-password" class="form-error">请输入密码</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary login-submit"
+                data-acp-type="button" data-acp-id="login-submit">
+          登录
+        </button>
+      </form>
+
+      <!-- 登录成功提示 -->
+      <div id="login-success" class="login-success-box"
+           data-acp-type="status" data-acp-id="login-success">
+        <div class="login-success-icon">&#x2705;</div>
+        <div class="login-success-msg">欢迎登录</div>
+        <div class="login-success-sub" id="login-success-user"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.add('hidden');
+    }
+
+    document.getElementById('modal-close').addEventListener('click', closeModal);
+
+    // 点击遮罩关闭
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    // ESC 关闭
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      var username = document.getElementById('login-username').value.trim();
+      var password = document.getElementById('login-password').value.trim();
+      var errUser = document.getElementById('err-username');
+      var errPass = document.getElementById('err-password');
+      var valid = true;
+
+      errUser.classList.remove('visible');
+      errPass.classList.remove('visible');
+
+      if (!username) { errUser.classList.add('visible'); valid = false; }
+      if (!password) { errPass.classList.add('visible'); valid = false; }
+
+      if (!valid) return;
+
+      // 显示成功
+      document.getElementById('login-form').style.display = 'none';
+      var successBox = document.getElementById('login-success');
+      document.getElementById('login-success-user').textContent = '用户：' + username;
+      successBox.classList.add('visible');
+    });
+  </script>
+</body>
+</html>
