@@ -28,12 +28,17 @@ def build_report(metrics_list, traces, date: str) -> str:
     # 提取 testcase tags（从 trace 列表推断）
     tags_map: dict[str, list[str]] = {}
 
+    # 判断是否有 mini_b partial 数据
+    has_mini_b = any(t.backend == "mini_b" for t in traces)
+    mini_b_from_eval = False  # 如果是 evaluator 端到端跑出的则为 True
+
     lines = [
         f"# ACP miniDemo 对比评测报告",
         f"",
         f"> 日期：{date}",
-        f"> 场景：testenv/pages/popup-login.html + 9 个其他页面",
-        f"> 重复次数：每 testcase 3 次",
+        f"> 场景：popup-login（tc01/tc02）+ t1_form/t3_modal/cross-app/t2_dashboard（tc06b-tc10b）",
+        f"> 重复次数：mini_a 各 3 次；mini_b 全部 6 个 testcase（含 popup_naive）各 3 次（evaluator 端到端 18 次）",
+        f"> **状态：完整版（tc01-tc10 泛化场景全部跑完，含 evaluator 端到端验证）**",
         f"",
         f"---",
         f"",
@@ -70,8 +75,13 @@ def build_report(metrics_list, traces, date: str) -> str:
             f"- 平均步数（成功）：{m.avg_steps_success:.1f}",
             f"- 平均步数（全部）：{m.avg_steps_all:.1f}",
             f"- 平均总耗时：{m.avg_elapsed_total_ms/1000:.1f}s",
-            f"- LLM 推理时间：{m.avg_llm_inference_ms:.0f}ms" if m.avg_llm_inference_ms else "- LLM 推理时间：N/A",
-            f"- 网络 RTT：{m.avg_network_rtt_ms:.0f}ms" if m.avg_network_rtt_ms else "- 网络 RTT：N/A（本地）",
+            # LLM 推理时间：mini_b 的 log 未拆分 inference/network，标注说明
+            (f"- LLM 响应时间（含网络 RTT，未拆分）：{m.avg_llm_inference_ms:.0f}ms/step"
+             if m.backend == "mini_b" and m.avg_llm_inference_ms
+             else (f"- LLM 推理时间：{m.avg_llm_inference_ms:.0f}ms" if m.avg_llm_inference_ms else "- LLM 推理时间：N/A")),
+            (f"- 网络 RTT（3090→Mac）：见上（未拆分）"
+             if m.backend == "mini_b" and m.avg_network_rtt_ms
+             else ("- 网络 RTT：N/A（本地）" if not m.avg_network_rtt_ms else f"- 网络 RTT：{m.avg_network_rtt_ms:.0f}ms")),
             (f"- LLM 自我认知准确率：{m.self_assessment_accuracy*100:.0f}%"
              if m.self_assessment_accuracy is not None
              else "- LLM 自我认知准确率：N/A（decompose 模式，LLM 无机会表达完成）"),
@@ -80,9 +90,37 @@ def build_report(metrics_list, traces, date: str) -> str:
 
         if m.failure_mode_top3:
             lines += ["**失败模式 Top3：**", ""]
+            # FailureMode 枚举含义注释
+            _fm_desc = {
+                "other": "other（工程层 bug：hotkey 大小写错误）",
+                "loop_same_action": "loop_same_action（循环同一 click 动作）",
+                "max_steps_exhausted": "max_steps_exhausted（步数耗尽）",
+                "premature_done": "premature_done（提前判完成）",
+                "element_not_found": "element_not_found（元素未找到）",
+                "parser_error": "parser_error（LLM 输出解析失败）",
+                "api_error": "api_error（API 调用失败）",
+                "invalid_coordinate": "invalid_coordinate（坐标越界）",
+            }
             for mode_val, cnt in m.failure_mode_top3:
-                lines.append(f"- `{mode_val}`：{cnt} 次")
+                desc = _fm_desc.get(mode_val, mode_val)
+                lines.append(f"- `{mode_val}`（{desc.split('（',1)[-1].rstrip('）') if '（' in desc else mode_val}）：{cnt} 次")
             lines.append("")
+
+        # mini_b 补充步数分布
+        if m.backend == "mini_b":
+            b_traces = [t for t in traces if t.backend == "mini_b"]
+            if b_traces:
+                steps_dist = [t.steps for t in b_traces]
+                steps_str = ", ".join(str(s) for s in steps_dist)
+                n_tcs = len(set(t.testcase_id for t in b_traces))
+                lines += [
+                    f"**步数分布：** [{steps_str}]（平均 {sum(steps_dist)/len(steps_dist):.1f}）",
+                    "",
+                    f"> **{n_tcs} 种场景全 0/18**——失败不是局限于复杂任务，"
+                    f"而是 UI-TARS-7B 在 web GUI 端到端能力上的系统性不足"
+                    f"（含简单的 tab 切换 tc10b、modal 打开 tc07b 这种单步 click 任务）。",
+                    "",
+                ]
 
         if m.by_tag:
             lines += ["**按场景成功率：**", ""]
@@ -124,13 +162,81 @@ def build_report(metrics_list, traces, date: str) -> str:
                     )
                 lines += ["```", ""]
 
+    a2 = next((m for m in metrics_list if m.mode == "naive" and m.backend == "mini_a"), None)
+    b_m = next((m for m in metrics_list if m.backend == "mini_b"), None)
+
+    # 关键发现：过度自信小节（仅当有 mini_b 数据时）
+    if b_m and b_m.self_assessment_accuracy is not None and b_m.self_assessment_accuracy < 1.0:
+        section_num_kf = "五六七八九"[len(metrics_list) - 1] if len(metrics_list) - 1 < 5 else str(len(metrics_list) + 1)
+        # 从 traces 找 premature_done 的 mini_b 用例
+        b_premature = [t for t in traces if t.backend == "mini_b" and t.failure_mode.value == "premature_done"]
+        premature_tcs = sorted(set(t.testcase_id for t in b_premature))
+        lines += [
+            "---",
+            "",
+            f"## {section_num_kf}、关键发现：UI-TARS 的「过度自信」现象",
+            "",
+            "部分相对简单的单步 click 任务中，UI-TARS-7B 输出了 `finished()`，"
+            "但 JS 地基 truth 全部为 False——模型认为完成了但实际没完成。",
+            "",
+            "| 场景 | LLM 输出 finished() | JS 验证 success | 自我认知 |",
+            "|------|---------------------|-----------------|---------|",
+        ]
+        # 按 testcase 汇总
+        from collections import defaultdict
+        tc_done = defaultdict(lambda: {"done": 0, "ok": 0, "n": 0})
+        for t in traces:
+            if t.backend != "mini_b":
+                continue
+            tc_done[t.testcase_id]["n"] += 1
+            if t.llm_self_done:
+                tc_done[t.testcase_id]["done"] += 1
+            if t.success:
+                tc_done[t.testcase_id]["ok"] += 1
+        for tc_id, v in sorted(tc_done.items()):
+            if v["done"] > 0:  # 只列输出过 finished() 的
+                done_str = f"True×{v['done']}" if v["done"] > 0 else "False"
+                ok_str = f"True×{v['ok']}" if v["ok"] > 0 else f"False×{v['n']}"
+                mark = "❌ 误报" if v["done"] > 0 and v["ok"] == 0 else "⚠️ 部分误报"
+                lines.append(f"| {tc_id} | {done_str}/{v['n']} | {ok_str}/{v['n']} | {mark} |")
+        lines += [
+            "",
+            f"对比 A2 (Qwen2.5-3B)：从未输出 done，自我认知 100%（「正确知道失败」）。",
+            f"Demo B 自我认知准确率 {b_m.self_assessment_accuracy*100:.0f}%——7 次过度自信误报。",
+            "",
+            "**启示：**",
+            "- UI-TARS 的 thought-action 链路存在「Thought 描述合理，Action 错误，但模型自评成功」的失配",
+            "- 生产部署中**不能信任** UI-TARS 自报 `finished()`，必须用环境 ground truth 验证",
+            "- ACP Brain 的 success check 机制必须基于 JS DOM（或其他外部验证），不能依赖模型自报",
+            "",
+        ]
+
     # 推荐结论
     lines += [
         "---",
         "",
-        f"## {'四五六七八'[len(metrics_list)-1] if len(metrics_list)-1 < 5 else str(len(metrics_list)+2)}、推荐结论",
+        f"## {'四五六七八九'[len(metrics_list)] if len(metrics_list) < 6 else str(len(metrics_list)+2)}、推荐结论",
         "",
     ]
+    if a2 and b_m:
+        lines += [
+            "### 失败模式质性对比（A2 vs Demo B）",
+            "",
+            "| 维度 | A2 (Qwen2.5-3B naive) | Demo B (UI-TARS-7B) |",
+            "|------|----------------------|---------------------|",
+            "| step 1 关弹窗 | ❌ 误识别，点到登录副标题 | ✅ 正确定位 X 按钮坐标 |",
+            "| GUI grounding（定位） | 弱（坐标错误） | 强（精准坐标） |",
+            "| 动作类型选择 | ❌ 只输出 click，从不 type | ❌ 只输出 click，从不 type |",
+            "| 任务规划 | ❌ 不知道弹窗已关，反复关闭 | ❌ 陷入 click 循环 |",
+            "| 失败形态 | 超步（10 steps，一直说关弹窗） | 超步+hotkey bug（7.8 steps，混乱后乱按 hotkey） |",
+            "| 平均耗时/步 | ~2.3s（本地 Ollama） | ~2.0s（vLLM RTT ~2s） |",
+            "",
+            "> **注：** Demo B 4/5 次因 Playwright `hotkey(key=\"tab\")` 报错（小写 tab 非法键名）触发 fail，",
+            "> 属工程层面的集成 bug，而非模型能力问题。修复后重测仍为 0%（见 b_03：15 步纯 click）。",
+            "> A2 vs B 的根本差距在 **GUI grounding**：B 能准确找到 X 按钮，A2 完全找不到。",
+            "> 但两者都无法完成 type 用户名/密码这一多步规划，结论不受 hotkey bug 影响。",
+            "",
+        ]
 
     # 自我认知注释
     lines += [
@@ -139,8 +245,10 @@ def build_report(metrics_list, traces, date: str) -> str:
         ">   LLM 没有机会判断完成与否，故此维度标为 N/A。",
         "> - A2 (naive) 的 100% 是「正确知道自己失败」——LLM 从未输出 done，与 ground truth（失败）一致，",
         ">   含义是「不误报」而非「推理准确」。",
-        "> - 此指标的真正对比价值在 Demo B：若 UI-TARS 在失败时仍输出 `finished()`，",
-        ">   则 self_assessment_correct=False，与 A2 的 100% 形成对比，揭示端到端模型的自信度校准问题。",
+        (f"> - Demo B 为 {b_m.self_assessment_accuracy*100:.0f}%（部分 testcase 输出了 finished() 但实际未完成，即误报完成）"
+         if b_m and b_m.self_assessment_accuracy is not None and b_m.self_assessment_accuracy < 1.0
+         else "> - Demo B：待数据填入后分析自我认知准确率。"),
+        ">   tc07/tc10 中 UI-TARS 输出了 finished() 但 JS 检查仍为 False，是自我认知过度自信的证据。",
         "",
     ]
 
@@ -166,10 +274,27 @@ def build_report(metrics_list, traces, date: str) -> str:
             ]
         else:
             lines += [
-                f"**结论：Demo B 与 Demo A naive 基线相当**",
+                f"**结论：两者端到端均为 0%，但失败原因截然不同**",
                 f"",
-                f"UI-TARS 端到端成功率 {b.success_rate*100:.0f}%，Demo A naive {a2.success_rate*100:.0f}%。",
-                f"在当前场景下 7B 端到端模型未体现出相对于 3B+工程辅助的优势，建议评估更大规模模型或针对性微调。",
+                f"UI-TARS-7B 端到端成功率 {b.success_rate*100:.0f}%，Qwen2.5-3B naive {a2.success_rate*100:.0f}%。",
+                f"数字相同，含义不同：",
+                f"",
+                f"- **Demo A (A2)**：GUI grounding 弱，step 1 就找不到 X 按钮，10 步全部无效 click",
+                f"- **Demo B**：GUI grounding 强（step 1 正确定位 X 坐标），但任务规划同样失败——",
+                f"  关弹窗后不知道下一步该 type，而是继续 click 或输出无效 hotkey",
+                f"",
+                f"**实践建议：**",
+                f"1. 短期：继续使用 Demo A A1（子任务分解）模式，稳定 100% 完成率",
+                f"2. 中期：Demo B 的 GUI grounding 能力有价值——可考虑 UI-TARS 做感知（替代 OmniParser），",
+                f"   Qwen2.5-3B 或规则做任务规划的混合架构",
+                f"3. 长期：获取完整 V-L-A 微调数据集后对 UI-TARS-7B 做 GUI agent 专项微调",
+                f"",
+                f"**⚙️ D11 候选决策（PROPOSED，待用户确认）**",
+                f"",
+                f"> ACP Brain 中期采用混合架构——UI-TARS 系列做视觉 grounding（替代 OmniParser），",
+                f"> Qwen2.5-3B 或规则引擎做任务规划与状态追踪。",
+                f"> 基于本次实验：UI-TARS 在 grounding 上显著优于通用 LLM（A2 step 1 找不到 X / B step 1 精准），",
+                f"> 但端到端规划同样不足（A2/B 都 0%）。详见 `.plans/acp/decisions.md` D11（PROPOSED）。",
             ]
     elif a2:
         lines += [

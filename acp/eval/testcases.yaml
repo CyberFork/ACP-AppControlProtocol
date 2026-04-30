@@ -111,3 +111,53 @@ testcases:
     success_check: "js:tab-btn-users.classList.contains(active)"
     repeats: 3
     tags: [navigation, single_step]
+
+# ── mini_b 版本（UI-TARS 端到端，backend=mini_b，无 mode）────────────────
+
+  - id: tc02b_popup_naive
+    instruction: "关闭弹窗，然后用用户名 demo 密码 123456 登录"
+    url: "{TESTENV}/pages/popup-login.html"
+    backend: mini_b
+    success_check: "js:login-success.visible"
+    repeats: 3
+    tags: [modal, login, compound]
+
+  - id: tc06b_t1_form_login
+    instruction: "用邮箱 test@example.com 和密码 password123 登录"
+    url: "{TESTENV}/pages/t1_form.html"
+    backend: mini_b
+    success_check: "js:toast-container.textContent=登录成功"
+    repeats: 3
+    tags: [form, login]
+
+  - id: tc07b_t3_open_modal
+    instruction: "点击列表第一个项目，打开详情弹窗"
+    url: "{TESTENV}/pages/t3_list_modal.html"
+    backend: mini_b
+    success_check: "js:item-modal.classList.contains(active)"
+    repeats: 3
+    tags: [modal, list]
+
+  - id: tc08b_cross_copy
+    instruction: "点击第一条笔记的复制按钮"
+    url: "{TESTENV}/pages/cross-app/notes-app.html"
+    backend: mini_b
+    success_check: "js:note-1-copy.textContent=已复制"
+    repeats: 3
+    tags: [clipboard, cross_app]
+
+  - id: tc09b_cross_send
+    instruction: "在输入框输入文字「ACP 测试消息」并点发送按钮"
+    url: "{TESTENV}/pages/cross-app/chat-app.html"
+    backend: mini_b
+    success_check: "js:message-list.children.length>2"
+    repeats: 3
+    tags: [form, cross_app]
+
+  - id: tc10b_t2_tab_users
+    instruction: "点击「用户列表」标签页"
+    url: "{TESTENV}/pages/t2_dashboard.html"
+    backend: mini_b
+    success_check: "js:tab-btn-users.classList.contains(active)"
+    repeats: 3
+    tags: [navigation, single_step]

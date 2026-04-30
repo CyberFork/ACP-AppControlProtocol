@@ -299,7 +299,7 @@ async def run_mini_a(
 
 
 # ---------------------------------------------------------------------------
-# mini_b backend（stub，等 #3 完成后实现）
+# mini_b backend（UI-TARS 7B via vLLM）
 # ---------------------------------------------------------------------------
 
 async def run_mini_b(
@@ -308,13 +308,94 @@ async def run_mini_b(
     host: str,
     log_dir: Path,
 ) -> EvalTrace:
-    """执行一个 mini_b testcase（UI-TARS 7B via vLLM）。
+    """执行一个 mini_b testcase（UI-TARS 7B via vLLM）。"""
+    from acp.demo.mini_b.llm_backend import UITARSBackend
+    from acp.demo.mini_b.loop import UITARSLoop
 
-    TODO: 等 backend-dev-6 完成 #3 后对接 acp/demo/mini_b/loop.py
-    """
-    raise NotImplementedError(
-        "mini_b backend 尚未就绪，等待 Task #3（vLLM 部署）完成后对接。"
+    run_id = f"eval_{tc.id}_r{repeat_idx}_b"
+    t_start = time.time()
+
+    # 用 host 覆盖默认 vLLM URL
+    llm = UITARSBackend(base_url=host + "/v1/chat/completions")
+    loop = UITARSLoop(llm=llm, log_dir=log_dir / run_id)
+
+    result = await loop.run(
+        instruction=tc.instruction,
+        start_url=tc.url,
+        run_id=run_id,
+        max_steps=tc.max_steps,
     )
+    elapsed_ms = (time.time() - t_start) * 1000
+
+    # LLM 自报 done：检查是否有 finished() 输出
+    llm_self_done = "finished()" in (result.message or "")
+    # JS ground truth 已在 loop 内做了检查（result.success）
+    js_success = result.success
+    self_correct = (js_success == llm_self_done) if llm_self_done is not None else None
+
+    # 平均 LLM 推理时间 + 网络 RTT（来自 step_logs 的 elapsed_llm）
+    llm_times = [s.elapsed_llm for s in result.steps if hasattr(s, "elapsed_llm")]
+    avg_llm_ms = (sum(llm_times) / len(llm_times) * 1000) if llm_times else 0.0
+
+    failure_mode = _classify_mini_b_failure(result)
+
+    return EvalTrace(
+        testcase_id=tc.id,
+        backend="mini_b",
+        mode=None,
+        repeat_idx=repeat_idx,
+        success=js_success,
+        llm_self_done=llm_self_done,
+        self_assessment_correct=self_correct,
+        steps=len(result.steps),
+        elapsed_total_ms=elapsed_ms,
+        llm_inference_ms=avg_llm_ms,
+        network_rtt_ms=avg_llm_ms,   # 本地无法分离，用同一值表示
+        failure_mode=failure_mode,
+        step_logs=[
+            {
+                "step": s.step,
+                "screenshot": s.screenshot_path,
+                "action": s.action,
+                "result": s.result,
+                "elapsed": s.elapsed,
+                "elapsed_llm": s.elapsed_llm,
+                "thought": s.thought[:80] if s.thought else "",
+            }
+            for s in result.steps
+        ],
+    )
+
+
+def _classify_mini_b_failure(result) -> FailureMode:
+    """从 UITARSLoop LoopResult 分类失败原因。"""
+    if result.success:
+        return FailureMode.NONE
+
+    steps = result.steps
+    if not steps:
+        return FailureMode.API_ERROR
+
+    msg = result.message or ""
+    if "超过最大步数" in msg:
+        # 检查是否一直重复同一动作
+        actions = [(s.action.get("action", ""), s.action.get("x", 0), s.action.get("y", 0))
+                   for s in steps]
+        unique = set(actions)
+        if len(unique) <= 3 and len(actions) >= 8:
+            return FailureMode.LOOP_SAME_ACTION
+        return FailureMode.MAX_STEPS_EXHAUSTED
+
+    if "finished()" in msg and not result.success:
+        return FailureMode.PREMATURE_DONE
+
+    # 检查是否有坐标越界
+    if any(s.action.get("x", 0) < 0 or s.action.get("y", 0) < 0
+           or s.action.get("x", 0) > 1280 or s.action.get("y", 0) > 800
+           for s in steps if isinstance(s.action, dict)):
+        return FailureMode.INVALID_COORDINATE
+
+    return FailureMode.OTHER
 
 
 # ---------------------------------------------------------------------------

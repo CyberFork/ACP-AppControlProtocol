@@ -177,15 +177,27 @@ def render_comparison_table(metrics_list: list[BackendMetrics]) -> str:
         ["**平均步数（成功 case）**"] + [f"{m.avg_steps_success:.1f}" for m in metrics_list],
         ["**平均步数（全部）**"] + [f"{m.avg_steps_all:.1f}" for m in metrics_list],
         ["**平均总耗时**"] + [f"{m.avg_elapsed_total_ms/1000:.1f}s" for m in metrics_list],
-        ["**LLM 推理时间**"] + [f"{m.avg_llm_inference_ms:.0f}ms" if m.avg_llm_inference_ms else "N/A" for m in metrics_list],
-        ["**网络 RTT（3090）**"] + [f"{m.avg_network_rtt_ms:.0f}ms" if m.avg_network_rtt_ms else "N/A" for m in metrics_list],
+        ["**LLM 响应时间**"] + [
+            f"{m.avg_llm_inference_ms:.0f}ms（含网络RTT，未拆分）" if m.backend == "mini_b" and m.avg_llm_inference_ms
+            else (f"{m.avg_llm_inference_ms:.0f}ms" if m.avg_llm_inference_ms else "N/A")
+            for m in metrics_list
+        ],
+        ["**网络 RTT（3090）**"] + [
+            "见上（未拆分）" if m.backend == "mini_b" and m.avg_network_rtt_ms
+            else (f"{m.avg_network_rtt_ms:.0f}ms" if m.avg_network_rtt_ms else "N/A")
+            for m in metrics_list
+        ],
         ["**LLM 自我认知准确率**"] + [
             "N/A (decompose 不适用)" if m.self_assessment_accuracy is None and m.mode == "decompose"
             else f"{m.self_assessment_accuracy*100:.0f}%" if m.self_assessment_accuracy is not None
             else "N/A"
             for m in metrics_list
         ],
-        ["**失败模式 Top1**"] + [m.failure_mode_top3[0][0] if m.failure_mode_top3 else "—" for m in metrics_list],
+        ["**失败模式 Top1**"] + [
+            f"{m.failure_mode_top3[0][0]}（工程bug）" if m.failure_mode_top3 and m.failure_mode_top3[0][0] == "other" and m.backend == "mini_b"
+            else (m.failure_mode_top3[0][0] if m.failure_mode_top3 else "—")
+            for m in metrics_list
+        ],
     ]
 
     # 按场景成功率（取所有 tag 的并集）
