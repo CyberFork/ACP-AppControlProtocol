@@ -163,6 +163,15 @@ def compare(
             testcase_tags=testcase_tags,
         ))
 
+    # mini_c（混合架构：本地 UI-TARS grounding + 云 GLM 规划）
+    c_traces = [t for t in traces if t.backend == "mini_c"]
+    if c_traces:
+        metrics.append(compute_metrics(
+            traces, "mini_c", None,
+            label="Demo C (混合: UI-TARS+GLM)",
+            testcase_tags=testcase_tags,
+        ))
+
     return metrics
 
 

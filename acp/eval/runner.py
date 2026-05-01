@@ -367,6 +367,105 @@ async def run_mini_b(
     )
 
 
+# ---------------------------------------------------------------------------
+# mini_c backend（混合架构：本地 UI-TARS grounding + 云 GLM 规划）
+# ---------------------------------------------------------------------------
+
+async def run_mini_c(
+    tc: EvalCase,
+    repeat_idx: int,
+    log_dir: Path,
+) -> EvalTrace:
+    """执行一个 mini_c testcase（混合架构）。"""
+    from acp.demo.mini_c.grounding import UITARSGrounding
+    from acp.demo.mini_c.loop import MiniCLoop
+    from acp.demo.mini_c.planner import PlannerLLM
+    from acp.demo.mini_c.state_describer import StateDescriber
+
+    run_id = f"eval_{tc.id}_r{repeat_idx}_c"
+    t_start = time.time()
+
+    planner = PlannerLLM()
+    grounder = UITARSGrounding()
+    describer = StateDescriber()
+    loop = MiniCLoop(planner=planner, grounder=grounder, describer=describer, log_dir=log_dir / run_id)
+
+    result = await loop.run(
+        instruction=tc.instruction,
+        start_url=tc.url,
+        success_check=tc.success_check,
+        run_id=run_id,
+        max_steps=tc.max_steps,
+    )
+    elapsed_ms = (time.time() - t_start) * 1000
+
+    # planner 说 done 时 is_done=True，loop 做了 JS check。result.success 已是 JS ground truth。
+    llm_self_done = "planner:done" in (result.message or "")
+    js_success = result.success
+    self_correct = (js_success == llm_self_done) if llm_self_done is not None else None
+
+    # 从 step_logs 收集计时
+    planner_times = [s.elapsed_planner for s in result.steps if hasattr(s, "elapsed_planner")]
+    grounding_times = [s.elapsed_grounding for s in result.steps if hasattr(s, "elapsed_grounding") and s.elapsed_grounding > 0]
+    avg_planner_ms = (sum(planner_times) / len(planner_times) * 1000) if planner_times else 0.0
+    avg_grounding_ms = (sum(grounding_times) / len(grounding_times) * 1000) if grounding_times else 0.0
+
+    failure_mode = _classify_mini_c_failure(result)
+
+    return EvalTrace(
+        testcase_id=tc.id,
+        backend="mini_c",
+        mode=None,
+        repeat_idx=repeat_idx,
+        success=js_success,
+        llm_self_done=llm_self_done,
+        self_assessment_correct=self_correct,
+        steps=len(result.steps),
+        elapsed_total_ms=elapsed_ms,
+        llm_inference_ms=avg_planner_ms,
+        network_rtt_ms=avg_grounding_ms,
+        failure_mode=failure_mode,
+        step_logs=[
+            {
+                "step": s.step,
+                "planner_intent": s.planner_intent,
+                "grounding_query": s.grounding_query,
+                "grounding_coord": list(s.grounding_coord) if s.grounding_coord else None,
+                "exec_result": s.exec_result,
+                "elapsed": s.elapsed,
+                "elapsed_planner": s.elapsed_planner,
+                "elapsed_grounding": s.elapsed_grounding,
+            }
+            for s in result.steps
+        ],
+    )
+
+
+def _classify_mini_c_failure(result) -> FailureMode:
+    """从 MiniCLoop LoopResult 分类失败原因。"""
+    if result.success:
+        return FailureMode.NONE
+
+    steps = result.steps
+    if not steps:
+        return FailureMode.API_ERROR
+
+    msg = result.message or ""
+    if "grounding 连续" in msg:
+        return FailureMode.ELEMENT_NOT_FOUND
+
+    if "planner:fail" in msg:
+        return FailureMode.API_ERROR
+
+    if "超过最大步数" in msg:
+        return FailureMode.MAX_STEPS_EXHAUSTED
+
+    if "planner:done" in msg and not result.success:
+        return FailureMode.PREMATURE_DONE
+
+    return FailureMode.OTHER
+
+
 def _classify_mini_b_failure(result) -> FailureMode:
     """从 UITARSLoop LoopResult 分类失败原因。"""
     if result.success:
@@ -443,6 +542,9 @@ class EvalRunner:
 
         if tc.backend == "mini_b":
             return await run_mini_b(tc, repeat_idx, self.mini_b_host, self.log_dir)
+
+        if tc.backend == "mini_c":
+            return await run_mini_c(tc, repeat_idx, self.log_dir)
 
         raise ValueError(f"未知 backend: {tc.backend}")
 

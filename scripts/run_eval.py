@@ -40,7 +40,7 @@ logger = logging.getLogger("run_eval")
 
 def parse_args():
     parser = argparse.ArgumentParser(description="ACP Demo Evaluator")
-    parser.add_argument("--backend", choices=["mini_a", "mini_b", "all"], default="mini_a")
+    parser.add_argument("--backend", choices=["mini_a", "mini_b", "mini_c", "all"], default="mini_a")
     parser.add_argument("--mode", choices=["decompose", "naive", "all"], default="all",
                         help="mini_a 模式过滤（all = 不过滤）")
     parser.add_argument("--ids", nargs="*", help="只跑指定 testcase ID")
