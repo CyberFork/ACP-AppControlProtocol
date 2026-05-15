@@ -1,0 +1,9 @@
+runtime:
+  app: telegram
+  run_mode: auto_send
+  dry_run: true
+  max_contacts_per_run: 20
+  max_messages_per_contact: 20
+  llm_enabled_control: false
+  llm_enabled_execution: false
+  driver: telegram_api

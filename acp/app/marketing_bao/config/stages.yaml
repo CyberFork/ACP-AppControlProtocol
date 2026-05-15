@@ -1,0 +1,86 @@
+stages:
+  - id: broad_reach
+    name: 撒网期
+    description: 用户广触达、批量引流，初步建立接触，无强意向筛选。
+    goal: 建立第一次有效互动，让对方愿意回复。
+    sub_statuses:
+      - new
+      - friend_request_sent
+      - friend_added
+      - greeting_sent
+      - waiting_reply
+    entry_keywords: []
+    exit_keywords:
+      - 感兴趣
+      - 了解
+      - 怎么
+      - 价格
+      - 方案
+    knowledge_tags:
+      - cold_start
+      - greeting
+      - low_pressure_opening
+    allowed_actions:
+      - add_friend
+      - send_message
+      - wait_reply
+
+  - id: interest_hit
+    name: 意向命中期
+    description: 从批量人群中筛选出有兴趣、有回应的目标用户，完成意向识别。
+    goal: 判断需求、预算、时间窗口与兴趣强度。
+    sub_statuses:
+      - replied
+      - light_interest
+      - qualified
+      - high_intent
+    entry_keywords:
+      - 感兴趣
+      - 了解
+      - 怎么
+      - 价格
+      - 方案
+    exit_keywords:
+      - 预约
+      - 电话
+      - 合作
+      - 购买
+      - 成交
+    knowledge_tags:
+      - intent_detection
+      - qualification
+      - product_intro
+    allowed_actions:
+      - send_message
+      - classify_intent
+      - ask_light_question
+
+  - id: conversion
+    name: 递进成交期
+    description: 针对性跟进、价值铺垫、节奏递进，最终完成转化成交。
+    goal: 推进预约、成交或明确下一步。
+    sub_statuses:
+      - value_sent
+      - objection_handling
+      - appointment_invited
+      - deal_closed
+      - rejected
+    entry_keywords:
+      - 预约
+      - 电话
+      - 合作
+      - 购买
+      - 成交
+    exit_keywords:
+      - 已付款
+      - 成交
+      - 不需要
+      - 别联系
+    knowledge_tags:
+      - objection_handling
+      - closing
+      - case_study
+    allowed_actions:
+      - send_message
+      - follow_up
+      - invite_call

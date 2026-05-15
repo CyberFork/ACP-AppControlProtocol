@@ -1,0 +1,8 @@
+feishu:
+  # 飞书企业自建应用：不使用个人账号密码。
+  # dry_run=true 时无需配置这些环境变量。
+  app_id_env: FEISHU_APP_ID
+  app_secret_env: FEISHU_APP_SECRET
+  default_receive_id_env: FEISHU_DEFAULT_RECEIVE_ID
+  default_receive_id_type_env: FEISHU_DEFAULT_RECEIVE_ID_TYPE
+  base_url: https://open.feishu.cn/open-apis

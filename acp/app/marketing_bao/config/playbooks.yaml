@@ -1,0 +1,31 @@
+playbooks:
+  - stage_id: broad_reach
+    tone: 轻松、自然、低压力，不强推销
+    objective: 发出低压力破冰消息，争取对方回复。
+    templates:
+      - "你好，看到你这边可能会关注{product_name}相关内容，先打个招呼～"
+      - "嗨，我这边主要做{product_name}，如果你后面有相关需求，可以简单交流一下。"
+    forbidden:
+      - 首条消息直接报价
+      - 连续追问隐私
+      - 高频催促回复
+
+  - stage_id: interest_hit
+    tone: 专业、简洁、有帮助
+    objective: 识别需求并提供轻量价值。
+    templates:
+      - "你方便说下目前主要想解决哪一块问题吗？我可以按你的情况简单给个方向。"
+      - "如果你关注的是{product_name}，通常我会先看目标、预算和时间节奏，再判断适合哪种方案。"
+    forbidden:
+      - 夸大承诺
+      - 未了解需求就强推成交
+
+  - stage_id: conversion
+    tone: 明确、可信、推进下一步
+    objective: 处理疑虑并推动预约或成交。
+    templates:
+      - "按你刚才说的情况，比较适合先做一次简单评估。你看今天或明天哪个时间方便？"
+      - "这个问题之前也有客户遇到过，我们一般会先用小范围验证，再决定是否放大投入。"
+    forbidden:
+      - 虚假案例
+      - 过度承诺效果

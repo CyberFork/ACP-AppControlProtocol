@@ -1,0 +1,7 @@
+telegram:
+  # 不使用 Bot API。第一优先路线是用户账号 API/TDLib 兼容 driver。
+  # MVP 默认 dry_run=true，不会真实发送。
+  api_id_env: TELEGRAM_API_ID
+  api_hash_env: TELEGRAM_API_HASH
+  phone_env: TELEGRAM_PHONE
+  session_name: marketing_bao_telegram
